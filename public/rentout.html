@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Rent out History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo"><div class="logo-mark"></div><div class="logo-text">NOTELET</div></a>
+      <nav class="nav" aria-hidden></nav>
+      <div class="header-actions">
+        <a href="/rentout" class="btn btn-ghost active">History</a>
+        <a href="/login" class="btn btn-primary">Log in</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="rentout-page">
+    <div class="container">
+      <section class="rentout-head">
+        <h1>Rent out History</h1>
+        <div class="rentout-controls">
+          <input id="search" class="input-search" placeholder="Search device or lessee" />
+          <select id="statusFilter" class="select-filter">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="returned">Returned</option>
+            <option value="late">Late</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+
+          <button id="openAddRent" class="btn btn-cta" type="button">Add Rent</button>
+        </div>
+      </section>
+      
+      <section class="rentout-list">
+        <div class="rentout-cards">
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Add Rent Modal -->
+  <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="closeModal" aria-label="Close">&times;</button>
+      <h2 id="modalTitle" class="modal-title">Add Rent</h2>
+      <form id="addRentForm" class="modal-form" autocomplete="off">
+        <div class="form-row">
+          <label for="deviceName">Device Name</label>
+          <input id="deviceName" name="deviceName" type="text" required placeholder="e.g. MacBook Pro 13&quot;">
+        </div>
+
+        <div class="form-row form-row--split">
+          <div>
+            <label for="deviceType">Device Type</label>
+            <select id="deviceType" name="deviceType" required>
+              <option value="">Select type</option>
+              <option>Laptop</option>
+              <option>Tablet</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="price">Price</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="4" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="imageUpload">Upload Image</label>
+          <input id="imageUpload" name="image" type="file" accept="image/*">
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-cta">Confirm</button>
+          <button type="button" id="cancelModal" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // modal open/close
+    const openBtn = document.getElementById('openAddRent');
+    const overlay = document.getElementById('modalOverlay');
+    const closeBtn = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelModal');
+    const form = document.getElementById('addRentForm');
+
+    function openModal(){
+      overlay.setAttribute('aria-hidden','false');
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('deviceName').focus();
+    }
+    function closeModal(){
+      overlay.setAttribute('aria-hidden','true');
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    openBtn && openBtn.addEventListener('click', openModal);
+    closeBtn && closeBtn.addEventListener('click', closeModal);
+    cancelBtn && cancelBtn.addEventListener('click', closeModal);
+    overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+
+    // simple submit handler (replace with real API call)
+    form && form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      // collect fields
+      const data = {
+        deviceName: form.deviceName.value.trim(),
+        deviceType: form.deviceType.value,
+        price: form.price.value,
+        description: form.description.value
+      };
+      console.log('Add rent (demo):', data);
+      // TODO: POST to /api/rentouts
+      closeModal();
+      // optionally show toast or add a new card client-side
+    });
+  </script>
+ </body>
+</html>
