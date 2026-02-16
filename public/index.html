@@ -10,16 +10,21 @@
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <div class="logo">
+      <a href="/" class="logo" aria-label="Notelet home">
         <div class="logo-mark" aria-hidden></div>
         <div class="logo-text">NOTELET</div>
-      </div>
+      </a>
 
-      <nav class="nav">
-        <a href="#">Search</a>
-        <a href="#">Cart</a>
-        <a href="#">Favorites</a>
-      </nav>
+        <nav class="nav">
+          <div id="headerSearch" class="header-search hidden">
+            <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
+            <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
+          </div>
+          <a href="#" id="navSearchBtn">Search</a>
+          <a href="#" id="headerCartBtn">Cart</a>
+          <a href="#" id="headerFavBtn">Favorites</a>
+          <a href="/devicehistory">History</a>
+        </nav>
 
       <div class="header-actions">
         <a href="/rentout" class="btn btn-ghost">Rent out</a>
@@ -39,8 +44,7 @@
           </h1>
           <p class="hero-sub">A rental management system where lessors and lessees can connect effortlessly — browse devices, confirm rentals, and track every step with confidence.</p>
           <div class="hero-cta">
-            <a class="btn btn-cta" href="#">Try Renting</a>
-            <a class="btn btn-outline" href="#">Learn more</a>
+            <a class="btn btn-cta" href="/renttype">Try Renting</a>
           </div>
         </div>
 
@@ -58,8 +62,7 @@
           </h2>
           <p class="alt-sub">A digital platform for faculties to register, lend, and approve device requests efficiently — simplifying the borrowing process for students and staff alike.</p>
           <div class="hero-cta">
-            <a class="btn btn-cta alt" href="#">Try Borrowing</a>
-            <a class="btn btn-outline" href="#">Learn more</a>
+            <a class="btn btn-cta alt" href="/borrowtype">Try Borrowing</a>
           </div>
         </div>
 
@@ -72,5 +75,52 @@
   </main>
 
   <!-- footer removed (moved into section-alt) -->
+    <script src="/navpopups.js"></script>
+    <script>
+    // Per-header search behavior: replace the Search nav link with an input when clicked
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){
+        navSearchBtn.style.display = 'none';
+        headerSearch.classList.remove('hidden');
+        headerSearchInput && headerSearchInput.focus();
+      }
+      function hideSearch(){
+        headerSearch.classList.add('hidden');
+        navSearchBtn.style.display = '';
+      }
+
+      navSearchBtn.addEventListener('click', (e)=>{ e.preventDefault(); showSearch(); });
+
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim();
+        if(!q) return;
+        // redirect to results page using search mode
+        const url = '/renttypedevice?type=search&q=' + encodeURIComponent(q);
+        window.location.href = url;
+      });
+
+      headerSearchInput && headerSearchInput.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          headerSearchSubmit.click();
+        } else if(e.key === 'Escape'){
+          hideSearch();
+        }
+      });
+
+      // hide search when clicking outside
+      document.addEventListener('click', (e)=>{
+        if(!headerSearch.contains(e.target) && e.target !== navSearchBtn){
+          hideSearch();
+        }
+      });
+    })();
+    </script>
 </body>
 </html>

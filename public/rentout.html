@@ -9,11 +9,22 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="container header-inner">
+      <div class="container header-inner">
       <a href="/" class="logo"><div class="logo-mark"></div><div class="logo-text">NOTELET</div></a>
-      <nav class="nav" aria-hidden></nav>
+
+      <nav class="nav">
+        <div id="headerSearch" class="header-search hidden">
+          <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
+          <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
+        </div>
+        <a href="#" id="navSearchBtn">Search</a>
+        <a href="#" id="headerCartBtn">Cart</a>
+        <a href="#" id="headerFavBtn">Favorites</a>
+        <a href="/devicehistory">History</a>
+      </nav>
+
       <div class="header-actions">
-        <a href="/rentout" class="btn btn-ghost active">History</a>
+        <a href="/rentout" class="btn btn-ghost active">Rent out</a>
         <a href="/login" class="btn btn-primary">Log in</a>
       </div>
     </div>
@@ -21,30 +32,200 @@
 
   <main class="rentout-page">
     <div class="container">
-      <section class="rentout-head">
-        <h1>Rent out History</h1>
-        <div class="rentout-controls">
-          <input id="search" class="input-search" placeholder="Search device or lessee" />
-          <select id="statusFilter" class="select-filter">
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="returned">Returned</option>
-            <option value="late">Late</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+      <section class="rentout-head centered">
+        <h1>User's Device</h1>
+        <div class="add-device-wrap">
+          <button id="openAddRent" class="btn btn-cta" type="button">Add Device</button>
+        </div>
+      </section>
 
-          <button id="openAddRent" class="btn btn-cta" type="button">Add Rent</button>
-        </div>
-      </section>
-      
       <section class="rentout-list">
-        <div class="rentout-cards">
+        <div class="rentout-cards three-up">
+          <!-- Card 1 -->
+          <article class="rentout-card" data-id="1" data-status="active" data-lessee="Jane Doe">
+            <div class="card-media-large" aria-hidden></div>
+            <div class="card-content">
+              <h3 class="device-name">MacBook Pro 13"</h3>
+              <div class="meta small">Renting Duration · 3 days</div>
+                <div class="meta small status-row">Status · <span class="badge badge-active">Requested</span> <button class="btn btn-confirm" data-id="1">Confirm</button></div>
+                  <div class="meta small">Pick up · 2026-01-10</div>
+              <div class="meta small">Return · 2026-01-13</div>
+              <div class="meta small">Total Price · $45</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+                  <div class="lessee-name">Jane Doe</div>
+                  <button class="btn btn-outline btn-review" data-id="1">Review</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Card 2 -->
+          <article class="rentout-card" data-id="2" data-status="returned" data-lessee="John Smith">
+            <div class="card-media-large" aria-hidden></div>
+            <div class="card-content">
+              <h3 class="device-name">Nikon D3500</h3>
+              <div class="meta small">Renting Duration · 7 days</div>
+              <div class="meta small">Status · <span class="badge badge-returned">Returned</span></div>
+              <div class="meta small">Pick up · 2025-12-20</div>
+              <div class="meta small">Return · 2025-12-27</div>
+              <div class="meta small">Total Price · $70</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+            <script src="/navpopups.js"></script>
+                  <div class="lessee-name">John Smith</div>
+                  <button class="btn btn-outline btn-review" data-id="2">Review</button>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Card 3 -->
+          <article class="rentout-card" data-id="3" data-status="rented" data-lessee="Alice Lee">
+            <div class="card-media-large" aria-hidden></div>
+            <div class="card-content">
+              <h3 class="device-name">Dell XPS 13</h3>
+              <div class="meta small">Renting Duration · 5 days</div>
+              <div class="meta small">Status · <span class="badge badge-rented">Rented</span></div>
+              <div class="meta small">Pick up · 2026-02-01</div>
+              <div class="meta small">Return · 2026-02-06</div>
+              <div class="meta small">Total Price · $55</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+                  <div class="lessee-name">Alice Lee</div>
+                  <button class="btn btn-outline btn-review" data-id="3">Review</button>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
+
+      <!-- Review Modal (history + write views) -->
+      <div id="reviewOverlay" class="review-overlay" aria-hidden="true">
+        <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+          <button class="modal-close" id="closeReview" aria-label="Close">&times;</button>
+          <h3 id="reviewTitle">Review History</h3>
+
+          <!-- HISTORY VIEW -->
+          <div class="review-body review-history" id="reviewHistoryView">
+            <div class="review-lessee header">
+              <div class="review-avatar"></div>
+              <div>
+                <div class="review-lessee-name" id="reviewLesseeName">Lessee Name</div>
+                <div class="review-stars small" aria-hidden>
+                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="review-list" id="reviewList">
+              <!-- sample entries (replaceable) -->
+              <div class="review-entry">
+                <div class="entry-avatar"></div>
+                <div class="entry-body">
+                  <div class="entry-head">
+                    <strong>Helen M.</strong>
+                    <span class="entry-time">Yesterday</span>
+                  </div>
+                  <div class="entry-stars">★ ★ ★ ★ ★</div>
+                  <div class="entry-text">Excellent running shoes. It turns very sharply on the foot.</div>
+                  <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+                </div>
+              </div>
+
+              <div class="review-entry">
+                <div class="entry-avatar"></div>
+                <div class="entry-body">
+                  <div class="entry-head">
+                    <strong>Helen M.</strong>
+                    <span class="entry-time">Yesterday</span>
+                  </div>
+                  <div class="entry-stars">★ ★ ★ ★ ★</div>
+                  <div class="entry-text">Excellent running shoes. It turns very sharply on the foot.</div>
+                  <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-actions history-actions">
+              <button id="writeReviewBtn" class="btn btn-cta">Write your review</button>
+            </div>
+          </div>
+
+          <!-- WRITE VIEW (hidden by default) -->
+          <div class="review-body review-write hidden" id="reviewWriteView">
+            <div class="review-lessee header">
+              <div class="review-avatar"></div>
+              <div>
+                <div class="review-lessee-name" id="writeLesseeName">Lessee Name</div>
+              </div>
+            </div>
+
+            <div class="review-stars" id="reviewStars" aria-hidden>
+              <button class="star" data-value="1">★</button>
+              <button class="star" data-value="2">★</button>
+              <button class="star" data-value="3">★</button>
+              <button class="star" data-value="4">★</button>
+              <button class="star" data-value="5">★</button>
+            </div>
+
+            <label for="reviewText" class="review-label">Write your review</label>
+            <textarea id="reviewText" rows="6" placeholder="Write your review"></textarea>
+
+            <div class="modal-actions">
+              <button id="submitReview" class="btn btn-cta">Confirm</button>
+              <button id="backToHistory" class="btn btn-outline">Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+
+  <!-- Confirm Modal for requested items -->
+  <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <button class="modal-close" id="closeConfirm" aria-label="Close">&times;</button>
+      <h3 id="confirmTitle">Confirm Request</h3>
+      <p id="confirmMessage">Confirm request for <strong id="confirmDevice"></strong> to <strong id="confirmLessee"></strong>?</p>
+      <div class="modal-actions">
+        <button id="confirmAccept" class="btn btn-cta">Confirm</button>
+        <button id="confirmCancel" class="btn btn-outline">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Add Rent Modal -->
   <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
@@ -64,7 +245,7 @@
               <option value="">Select type</option>
               <option>Laptop</option>
               <option>Tablet</option>
-              <option>Other</option>
+              <option>Others</option>
             </select>
           </div>
           <div>
@@ -129,6 +310,182 @@
       // TODO: POST to /api/rentouts
       closeModal();
       // optionally show toast or add a new card client-side
+    });
+
+    // Review modal logic (history + write views)
+    const reviewOverlay = document.getElementById('reviewOverlay');
+    const closeReview = document.getElementById('closeReview');
+    const reviewLesseeName = document.getElementById('reviewLesseeName');
+    const writeLesseeName = document.getElementById('writeLesseeName');
+    const reviewStars = document.getElementById('reviewStars');
+    const reviewText = document.getElementById('reviewText');
+    const submitReview = document.getElementById('submitReview');
+    const reviewHistoryView = document.getElementById('reviewHistoryView');
+    const reviewWriteView = document.getElementById('reviewWriteView');
+    const writeReviewBtn = document.getElementById('writeReviewBtn');
+    const backToHistory = document.getElementById('backToHistory');
+    const reviewList = document.getElementById('reviewList');
+    const reviewTitle = document.getElementById('reviewTitle');
+
+    function showHistoryView(){
+      reviewHistoryView.classList.remove('hidden');
+      reviewWriteView.classList.add('hidden');
+      reviewTitle.textContent = 'Review History';
+    }
+
+    function showWriteView(){
+      reviewHistoryView.classList.add('hidden');
+      reviewWriteView.classList.remove('hidden');
+      reviewTitle.textContent = 'Review lessee';
+      setTimeout(()=>{ reviewText.focus(); }, 50);
+    }
+
+    function openReviewModal(lessee){
+      // set lessee names in both views
+      reviewLesseeName.textContent = lessee;
+      writeLesseeName.textContent = lessee;
+      showHistoryView();
+      reviewOverlay.classList.add('open');
+      reviewOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReviewModal(){
+      reviewOverlay.classList.remove('open');
+      reviewOverlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      reviewText.value = '';
+      Array.from(document.querySelectorAll('.review-stars .star, .review-stars button.star')).forEach(s=>s.classList.remove('active'));
+      showHistoryView();
+    }
+
+    // click handler for review buttons: open for ANY status now
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btn-review');
+      if(!btn) return;
+      const card = btn.closest('.rentout-card');
+      const lessee = card && (card.dataset.lessee || card.querySelector('.lessee-name')?.textContent);
+      openReviewModal(lessee || 'Lessee');
+    });
+
+    closeReview && closeReview.addEventListener('click', closeReviewModal);
+    reviewOverlay && reviewOverlay.addEventListener('click', (e)=>{ if(e.target === reviewOverlay) closeReviewModal(); });
+
+    // star rating behavior (write view)
+    reviewStars && reviewStars.addEventListener('click', (e)=>{
+      const star = e.target.closest('.star');
+      if(!star) return;
+      const val = parseInt(star.dataset.value,10);
+      Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>{
+        s.classList.toggle('active', parseInt(s.dataset.value,10) <= val);
+      });
+    });
+
+    // toggle to write view
+    writeReviewBtn && writeReviewBtn.addEventListener('click', ()=>{
+      showWriteView();
+    });
+
+    backToHistory && backToHistory.addEventListener('click', ()=>{
+      showHistoryView();
+    });
+
+    // submit review: append to history as a new entry (client-side demo)
+    submitReview && submitReview.addEventListener('click', ()=>{
+      const stars = reviewStars.querySelectorAll('.star.active').length;
+      const text = reviewText.value.trim();
+      console.log('Review submit', {stars, text});
+      // append to review list visually
+      const entry = document.createElement('div');
+      entry.className = 'review-entry';
+      entry.innerHTML = `
+        <div class="entry-avatar"></div>
+        <div class="entry-body">
+          <div class="entry-head"><strong>You</strong> <span class="entry-time">Just now</span></div>
+          <div class="entry-stars">${'★ '.repeat(Math.max(0,stars)).trim()}</div>
+          <div class="entry-text">${text ? escapeHtml(text) : ''}</div>
+          <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">0</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+        </div>`;
+      reviewList.insertBefore(entry, reviewList.firstChild);
+      // wire thumbs for the newly added entry (toggle behavior)
+      function entryKeyFor(e){ try{ const name = e.querySelector('.entry-head strong')?.textContent||'u'; const txt = e.querySelector('.entry-text')?.textContent||''; return 'rentout_review_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(x){ return 'rentout_'+Date.now(); } }
+      (function wireNew(e){ const likeBtn = e.querySelector('.thumb-like'); const dislikeBtn = e.querySelector('.thumb-dislike'); const likeCountEl = e.querySelector('.count-like'); const dislikeCountEl = e.querySelector('.count-dislike'); const key = entryKeyFor(e); const cur = localStorage.getItem(key); if(cur==='like') likeBtn && likeBtn.classList.add('active'); if(cur==='dislike') dislikeBtn && dislikeBtn.classList.add('active'); likeBtn && likeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); likeCountEl && (likeCountEl.textContent = String(parseInt(likeCountEl.textContent||'0',10)+1)); if(now==='dislike'){ dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); dislikeBtn && dislikeBtn.classList.remove('active'); } } }); dislikeBtn && dislikeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); dislikeCountEl && (dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1)); if(now==='like'){ likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); likeBtn && likeBtn.classList.remove('active'); } } }); })(entry);
+      // TODO: POST review to server
+      closeReviewModal();
+      alert('Thank you for your review!');
+    });
+
+    // wire like/dislike for existing static review entries in the modal (toggle behavior)
+    document.querySelectorAll('.review-entry').forEach((entry, i)=>{
+      try{
+        const likeBtn = entry.querySelector('.thumb-like');
+        const dislikeBtn = entry.querySelector('.thumb-dislike');
+        const likeCountEl = entry.querySelector('.count-like');
+        const dislikeCountEl = entry.querySelector('.count-dislike');
+        const key = (function(){ try{ const name = entry.querySelector('.entry-head strong')?.textContent||('r'+i); const txt = entry.querySelector('.entry-text')?.textContent||''; return 'rentout_review_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(e){ return 'rentout_static_'+i; } })();
+        const cur = localStorage.getItem(key);
+        if(cur==='like') likeBtn && likeBtn.classList.add('active');
+        if(cur==='dislike') dislikeBtn && dislikeBtn.classList.add('active');
+        likeBtn && likeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); likeCountEl && (likeCountEl.textContent = String(parseInt(likeCountEl.textContent||'0',10)+1)); if(now==='dislike'){ dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); dislikeBtn && dislikeBtn.classList.remove('active'); } } });
+        dislikeBtn && dislikeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); dislikeCountEl && (dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1)); if(now==='like'){ likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); likeBtn && likeBtn.classList.remove('active'); } } });
+      }catch(e){ /* ignore wiring errors */ }
+    });
+
+    // simple HTML escaper
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Confirm modal logic for requested items
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    const closeConfirm = document.getElementById('closeConfirm');
+    const confirmDevice = document.getElementById('confirmDevice');
+    const confirmLessee = document.getElementById('confirmLessee');
+    const confirmAccept = document.getElementById('confirmAccept');
+    const confirmCancel = document.getElementById('confirmCancel');
+    let currentConfirmCard = null;
+
+    // open confirm modal with card info
+    function openConfirmModal(card){
+      currentConfirmCard = card;
+      const device = card.querySelector('.device-name')?.textContent || '';
+      const lessee = card.dataset.lessee || card.querySelector('.lessee-name')?.textContent || '';
+      confirmDevice.textContent = device;
+      confirmLessee.textContent = lessee;
+      confirmOverlay.classList.add('open');
+      confirmOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeConfirmModal(){
+      confirmOverlay.classList.remove('open');
+      confirmOverlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      currentConfirmCard = null;
+    }
+
+    // handle click on small Confirm buttons in cards
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btn-confirm');
+      if(!btn) return;
+      const card = btn.closest('.rentout-card');
+      if(!card) return;
+      openConfirmModal(card);
+    });
+
+    closeConfirm && closeConfirm.addEventListener('click', closeConfirmModal);
+    confirmCancel && confirmCancel.addEventListener('click', closeConfirmModal);
+    confirmOverlay && confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) closeConfirmModal(); });
+
+    // Accept confirmation: mark as rented (demo)
+    confirmAccept && confirmAccept.addEventListener('click', ()=>{
+      if(!currentConfirmCard) return closeConfirmModal();
+      currentConfirmCard.dataset.status = 'rented';
+      const badge = currentConfirmCard.querySelector('.badge');
+      if(badge){ badge.className = 'badge badge-rented'; badge.textContent = 'Rented'; }
+      // remove confirm button
+      const cbtn = currentConfirmCard.querySelector('.btn-confirm');
+      if(cbtn) cbtn.remove();
+      closeConfirmModal();
+      alert('Request confirmed. Status updated to Rented.');
     });
   </script>
  </body>

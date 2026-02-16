@@ -16,11 +16,20 @@
         <div class="logo-text">NOTELET</div>
       </a>
 
-      <!-- keep header links minimal on the login page -->
-      <nav class="nav" aria-hidden></nav>
+      <nav class="nav">
+        <div id="headerSearch" class="header-search hidden">
+          <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
+          <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
+        </div>
+        <a href="#" id="navSearchBtn">Search</a>
+        <a href="#" id="headerCartBtn">Cart</a>
+        <a href="#" id="headerFavBtn">Favorites</a>
+        <a href="/devicehistory">History</a>
+      </nav>
 
       <div class="header-actions">
-        <!-- header actions left empty on login page (logo returns home) -->
+        <a href="/rentout" class="btn btn-ghost" id="rentOutLink">Rent out</a>
+        <a href="/login" class="btn btn-primary" id="headerLoginLink">Log in</a>
       </div>
     </div>
   </header>
@@ -43,14 +52,59 @@
             </div>
 
             <div class="login-actions">
-              <button type="submit" class="btn btn-cta">Log in</button>
-              <a href="/signup" class="btn btn-outline">Create account</a>
+              <button type="submit" class="btn btn-cta" id="loginSubmitBtn">Log in</button>
+              <a href="/signup" class="btn btn-create" id="createAccountBtn">Create account</a>
             </div>
           </form>
+
+          <div class="login-admin-row">
+            <a href="/login?admin=1" class="btn btn-ghost login-admin">Log in as admin</a>
+          </div>
 
         </div>
       </div>
     </section>
   </main>
+  <script src="/navpopups.js"></script>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+
+  <script>
+    (function(){
+      const params = new URL(window.location.href).searchParams;
+      const isAdmin = params.get('admin') === '1';
+
+      if(!isAdmin) return;
+
+      const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+      const rentOutLink = document.getElementById('rentOutLink');
+      const headerLoginLink = document.getElementById('headerLoginLink');
+
+      // Keep the form button as "Log in"; only the navbar indicates admin mode.
+      if(loginSubmitBtn) loginSubmitBtn.textContent = 'Log in';
+      if(headerLoginLink) headerLoginLink.textContent = 'Admin';
+      if(rentOutLink){
+        rentOutLink.textContent = 'Give out';
+        rentOutLink.setAttribute('href', '/giveout');
+      }
+    })();
+  </script>
 </body>
 </html>

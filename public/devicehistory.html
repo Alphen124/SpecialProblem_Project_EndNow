@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Device History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Borrow cards on history page: blue background + white text (match screenshot) */
+    .rentout-card.borrow-card{ box-shadow:0px 4px 4px rgba(0,0,0,0.25); }
+    .rentout-card.borrow-card .card-content{ background:var(--primary); border-bottom-left-radius:12px; border-bottom-right-radius:12px; }
+    .rentout-card.borrow-card .device-name,
+    .rentout-card.borrow-card .meta.small,
+    .rentout-card.borrow-card .lessee-name{ color:#fff; }
+    .rentout-card.borrow-card .card-divider{ background:rgba(255,255,255,0.65); }
+    .rentout-card.borrow-card .badge{ background:rgba(255,255,255,0.18); color:#fff; }
+    .rentout-card.borrow-card .avatar{ background:transparent; border:6px solid #fff; box-shadow:none; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo"><div class="logo-mark"></div><div class="logo-text">NOTELET</div></a>
+
+      <nav class="nav">
+        <div id="headerSearch" class="header-search hidden">
+          <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
+          <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
+        </div>
+        <a href="#" id="navSearchBtn">Search</a>
+        <a href="#" id="headerCartBtn">Cart</a>
+        <a href="#" id="headerFavBtn">Favorites</a>
+        <a href="/devicehistory" id="headerHistoryBtn">History</a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="/rentout" class="btn btn-ghost">Rent out</a>
+        <a href="/login" class="btn btn-primary">Log in</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="rentout-page">
+    <div class="container">
+      <section class="rentout-head centered">
+        <h1>Device History</h1>
+      </section>
+
+      <section class="rentout-list">
+        <div id="historyCards" class="rentout-cards three-up" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Review Modal (same UI as rentout page) -->
+  <div id="reviewOverlay" class="review-overlay" aria-hidden="true">
+    <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+      <button class="modal-close" id="closeReview" aria-label="Close">&times;</button>
+      <h3 id="reviewTitle">Review History</h3>
+
+      <!-- HISTORY VIEW -->
+      <div class="review-body review-history" id="reviewHistoryView">
+        <div class="review-lessee header">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="reviewLesseeName">Lessor Name</div>
+            <div class="review-stars small" aria-hidden>
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-list" id="reviewList">
+          <!-- sample entries (demo) -->
+          <div class="review-entry">
+            <div class="entry-avatar"></div>
+            <div class="entry-body">
+              <div class="entry-head">
+                <strong>Helen M.</strong>
+                <span class="entry-time">Yesterday</span>
+              </div>
+              <div class="entry-stars">★ ★ ★ ★ ★</div>
+              <div class="entry-text">Excellent device. Works perfectly.</div>
+              <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions history-actions">
+          <button id="writeReviewBtn" class="btn btn-cta">Write your review</button>
+        </div>
+      </div>
+
+      <!-- WRITE VIEW (hidden by default) -->
+      <div class="review-body review-write hidden" id="reviewWriteView">
+        <div class="review-lessee header">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="writeLesseeName">Lessor Name</div>
+          </div>
+        </div>
+
+        <div class="review-stars" id="reviewStars" aria-hidden>
+          <button class="star" data-value="1">★</button>
+          <button class="star" data-value="2">★</button>
+          <button class="star" data-value="3">★</button>
+          <button class="star" data-value="4">★</button>
+          <button class="star" data-value="5">★</button>
+        </div>
+
+        <label for="reviewText" class="review-label">Write your review</label>
+        <textarea id="reviewText" rows="6" placeholder="Write your review"></textarea>
+
+        <div class="modal-actions">
+          <button id="submitReview" class="btn btn-cta" type="button">Confirm</button>
+          <button id="backToHistory" class="btn btn-outline" type="button">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CART_KEY = 'notelet_cart_v1';
+    const HISTORY_KEY = 'notelet_history_v1';
+    const HISTORY_INIT_KEY = 'notelet_history_initialized_v2';
+
+    // Make the history start empty until the user checks out.
+    // This clears any previously-saved demo history ONE time.
+    (function(){
+      try{
+        if(!localStorage.getItem(HISTORY_INIT_KEY)){
+          localStorage.setItem(HISTORY_KEY, '[]');
+          localStorage.setItem(HISTORY_INIT_KEY, '1');
+        }
+      }catch(e){}
+    })();
+
+    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; } }
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    function normalize(it){
+      const source = it?.source || 'rent';
+      return {
+        id: it?.id,
+        source,
+        name: it?.name || 'Device Name',
+        price: it?.price || '',
+        image: it?.image || it?.img || '',
+        status: it?.status || 'Completed',
+        date: it?.date || '',
+        pickup: it?.pickup || '',
+        returnt: it?.returnt || '',
+        location: it?.location || 'Pick up or return Location',
+        total: (typeof it?.total === 'number') ? it.total : null,
+        days: (typeof it?.days === 'number') ? it.days : null,
+        lessor: it?.lessor || (source === 'borrow' ? 'CSKMITL' : 'Lessor Name')
+      };
+    }
+
+    function splitDates(dateText){
+      const raw = String(dateText || '').trim();
+      if(!raw) return { pick:'', ret:'' };
+      const parts = raw.split(' - ').map(s=>s.trim()).filter(Boolean);
+      if(parts.length === 1) return { pick: parts[0], ret: '' };
+      return { pick: parts[0], ret: parts[1] };
+    }
+
+    function badgeClass(status){
+      const s = String(status || '').trim().toLowerCase();
+      if(s === 'requested') return 'badge-active';
+      if(s === 'rented') return 'badge-rented';
+      if(s === 'returned') return 'badge-returned';
+      if(s === 'completed') return 'badge-returned';
+      return 'badge-active';
+    }
+
+    function durationLabel(source){
+      return source === 'borrow' ? 'Borrowing Duration' : 'Renting Duration';
+    }
+
+    function render(){
+      const grid = document.getElementById('historyCards');
+      const items = getHistory().map(normalize);
+
+      if(!items.length){
+        grid.innerHTML = '<p class="meta small" style="grid-column:1/-1;justify-self:center;padding:24px 0;">No device history.</p>';
+        return;
+      }
+
+      grid.innerHTML = '';
+      items.forEach((it)=>{
+        const dates = splitDates(it.date);
+        const statusText = String(it.status || 'Completed');
+        const badge = badgeClass(statusText);
+
+        const lessorText = (it.source === 'borrow' && (it.lessor === 'ComSci, KMITL')) ? 'CSKMITL' : it.lessor;
+
+        let durationText = '';
+        if(typeof it.days === 'number'){
+          durationText = `${durationLabel(it.source)} · ${it.days} days`;
+        }
+
+        let totalText = '';
+        if(it.source !== 'borrow'){
+          if(typeof it.total === 'number') totalText = `${it.total.toFixed(2)} Baht`;
+          else if(it.price) totalText = String(it.price);
+        }
+
+        const reviewBtn = (it.source === 'rent')
+          ? '<button class="btn btn-outline btn-review" type="button">Review</button>'
+          : '';
+
+        const card = document.createElement('article');
+        card.className = 'rentout-card' + (it.source === 'borrow' ? ' borrow-card' : '');
+        card.setAttribute('data-id', String(it.id ?? ''));
+        card.setAttribute('data-status', String(statusText).toLowerCase());
+
+        card.innerHTML = `
+          <div class="card-media-large" aria-hidden></div>
+          <div class="card-content">
+            <h3 class="device-name">${escapeHtml(it.name)}</h3>
+            ${durationText ? `<div class="meta small">${escapeHtml(durationText)}</div>` : ''}
+
+            <div class="meta small">Status · <span class="badge ${badge}">${escapeHtml(statusText)}</span></div>
+            ${dates.pick ? `<div class="meta small">Pick up · ${escapeHtml(dates.pick)}</div>` : ''}
+            ${dates.ret ? `<div class="meta small">Return · ${escapeHtml(dates.ret)}</div>` : ''}
+            ${totalText ? `<div class="meta small">Total Price · ${escapeHtml(totalText)}</div>` : ''}
+
+            <div class="card-divider"></div>
+
+            <div class="card-footer">
+              <div class="avatar" aria-hidden></div>
+              <div class="lessee">
+                <div class="lessee-name">${escapeHtml(lessorText)}</div>
+                ${reviewBtn}
+              </div>
+            </div>
+          </div>
+        `;
+
+        if(it.image){
+          const media = card.querySelector('.card-media-large');
+          if(media){
+            const safeUrl = String(it.image).replace(/"/g, '%22');
+            media.style.backgroundImage = `url("${encodeURI(safeUrl)}")`;
+            media.style.backgroundSize = 'cover';
+            media.style.backgroundPosition = 'center';
+          }
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Review modal logic (history + write views) — same behavior as rentout
+    (function(){
+      const reviewOverlay = document.getElementById('reviewOverlay');
+      const closeReview = document.getElementById('closeReview');
+      const reviewLesseeName = document.getElementById('reviewLesseeName');
+      const writeLesseeName = document.getElementById('writeLesseeName');
+      const reviewStars = document.getElementById('reviewStars');
+      const reviewText = document.getElementById('reviewText');
+      const submitReview = document.getElementById('submitReview');
+      const reviewHistoryView = document.getElementById('reviewHistoryView');
+      const reviewWriteView = document.getElementById('reviewWriteView');
+      const writeReviewBtn = document.getElementById('writeReviewBtn');
+      const backToHistory = document.getElementById('backToHistory');
+      const reviewList = document.getElementById('reviewList');
+      const reviewTitle = document.getElementById('reviewTitle');
+
+      if(!reviewOverlay) return;
+
+      function showHistoryView(){
+        reviewHistoryView && reviewHistoryView.classList.remove('hidden');
+        reviewWriteView && reviewWriteView.classList.add('hidden');
+        if(reviewTitle) reviewTitle.textContent = 'Review History';
+      }
+
+      function showWriteView(){
+        reviewHistoryView && reviewHistoryView.classList.add('hidden');
+        reviewWriteView && reviewWriteView.classList.remove('hidden');
+        if(reviewTitle) reviewTitle.textContent = 'Review lessor';
+        setTimeout(()=>{ reviewText && reviewText.focus(); }, 50);
+      }
+
+      function openReviewModal(name){
+        if(reviewLesseeName) reviewLesseeName.textContent = name;
+        if(writeLesseeName) writeLesseeName.textContent = name;
+        showHistoryView();
+        reviewOverlay.classList.add('open');
+        reviewOverlay.setAttribute('aria-hidden','false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeReviewModal(){
+        reviewOverlay.classList.remove('open');
+        reviewOverlay.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+        if(reviewText) reviewText.value = '';
+        if(reviewStars){
+          Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+        }
+        showHistoryView();
+      }
+
+      // open on Review button click (use lessor name text)
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.btn-review');
+        if(!btn) return;
+        const card = btn.closest('.rentout-card');
+        const name = card?.querySelector('.lessee-name')?.textContent?.trim() || 'Lessor Name';
+        openReviewModal(name);
+      });
+
+      closeReview && closeReview.addEventListener('click', closeReviewModal);
+      reviewOverlay.addEventListener('click', (e)=>{ if(e.target === reviewOverlay) closeReviewModal(); });
+
+      reviewStars && reviewStars.addEventListener('click', (e)=>{
+        const star = e.target.closest('.star');
+        if(!star) return;
+        const val = parseInt(star.dataset.value, 10);
+        Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>{
+          s.classList.toggle('active', parseInt(s.dataset.value,10) <= val);
+        });
+      });
+
+      writeReviewBtn && writeReviewBtn.addEventListener('click', showWriteView);
+      backToHistory && backToHistory.addEventListener('click', showHistoryView);
+
+      // like/dislike toggle behavior for any review entry
+      function wireEntry(entry, key){
+        try{
+          const likeBtn = entry.querySelector('.thumb-like');
+          const dislikeBtn = entry.querySelector('.thumb-dislike');
+          const likeCountEl = entry.querySelector('.count-like');
+          const dislikeCountEl = entry.querySelector('.count-dislike');
+          const cur = localStorage.getItem(key);
+          if(cur === 'like') likeBtn && likeBtn.classList.add('active');
+          if(cur === 'dislike') dislikeBtn && dislikeBtn.classList.add('active');
+
+          likeBtn && likeBtn.addEventListener('click', ()=>{
+            const now = localStorage.getItem(key);
+            if(now === 'like'){
+              localStorage.removeItem(key);
+              likeBtn.classList.remove('active');
+              if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent || '0', 10) - 1));
+            }else{
+              localStorage.setItem(key, 'like');
+              likeBtn.classList.add('active');
+              if(likeCountEl) likeCountEl.textContent = String(parseInt(likeCountEl.textContent || '0', 10) + 1);
+              if(now === 'dislike'){
+                if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent || '0', 10) - 1));
+                dislikeBtn && dislikeBtn.classList.remove('active');
+              }
+            }
+          });
+
+          dislikeBtn && dislikeBtn.addEventListener('click', ()=>{
+            const now = localStorage.getItem(key);
+            if(now === 'dislike'){
+              localStorage.removeItem(key);
+              dislikeBtn.classList.remove('active');
+              if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent || '0', 10) - 1));
+            }else{
+              localStorage.setItem(key, 'dislike');
+              dislikeBtn.classList.add('active');
+              if(dislikeCountEl) dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent || '0', 10) + 1);
+              if(now === 'like'){
+                if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent || '0', 10) - 1));
+                likeBtn && likeBtn.classList.remove('active');
+              }
+            }
+          });
+        }catch(err){ /* ignore */ }
+      }
+
+      // wire existing entries
+      document.querySelectorAll('#reviewList .review-entry').forEach((entry, i)=>{
+        const key = 'devicehistory_review_static_' + i;
+        wireEntry(entry, key);
+      });
+
+      submitReview && submitReview.addEventListener('click', ()=>{
+        const stars = reviewStars ? reviewStars.querySelectorAll('.star.active').length : 0;
+        const text = (reviewText?.value || '').trim();
+
+        const entry = document.createElement('div');
+        entry.className = 'review-entry';
+        entry.innerHTML = `
+          <div class="entry-avatar"></div>
+          <div class="entry-body">
+            <div class="entry-head"><strong>You</strong> <span class="entry-time">Just now</span></div>
+            <div class="entry-stars">${'★ '.repeat(Math.max(0,stars)).trim()}</div>
+            <div class="entry-text">${text ? escapeHtml(text) : ''}</div>
+            <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">0</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+          </div>
+        `;
+        reviewList && reviewList.insertBefore(entry, reviewList.firstChild);
+
+        const key = 'devicehistory_review_' + Date.now();
+        wireEntry(entry, key);
+        closeReviewModal();
+      });
+    })();
+
+    // header search toggle
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', (e)=>{ e.preventDefault(); const q = headerSearchInput && headerSearchInput.value; if(q) { window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q); } hideSearch(); });
+    })();
+
+    render();
+  </script>
+
+  <script src="/navpopups.js"></script>
+</body>
+</html>

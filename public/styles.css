@@ -39,8 +39,15 @@ body{
 }
 .logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
 .logo-mark{
-  width:36px;height:28px;background:var(--accent);border-radius:6px;
-  box-shadow:0 3px 10px rgba(0,0,0,0.08);
+  width:52px;
+  height:52px;
+  background-color:transparent;
+  border-radius:0;
+  box-shadow:none;
+  background-image:url('/logo.png');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
 }
 .logo-text{font-weight:700;font-size:20px;letter-spacing:0.6px}
 .nav{display:flex;gap:20px;align-items:center}
@@ -206,6 +213,51 @@ body{
   margin-top:6px;
 }
 
+/* ensure login + create buttons share the same font styling */
+.login-actions .btn,
+.login-actions a{
+  font-weight:600;
+}
+
+/* make login/create buttons equal size inside the login card */
+.login-card .login-actions{ width:100%; }
+.login-card .login-actions > *{
+  flex:1 1 0;
+  text-align:center;
+}
+.login-card .login-actions .btn-cta,
+.login-card .login-actions .btn-create{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  font-size:16px;
+}
+
+/* Create account button on login card: white bg + black text */
+.btn-create{
+  background:#fff;
+  color:#111;
+  border:1px solid rgba(0,0,0,0.12);
+  padding:14px 20px;
+  border-radius:10px;
+  text-decoration:none;
+  display:inline-block;
+  font-weight:600;
+}
+
+.login-admin-row{
+  display:flex;
+  justify-content:center;
+  margin-top:14px;
+}
+
+/* ghost button variant inside login card should be dark */
+.login-card .btn-ghost.login-admin{
+  color:#111;
+  border:1px solid rgba(0,0,0,0.12);
+}
+
 /* make the create-account outline dark on the white login card */
 .login-card .btn-outline{
   background:transparent;
@@ -217,10 +269,11 @@ body{
 }
 
 /* Rent-out history page */
-.rentout-page{ padding:48px 0; min-height: calc(100vh - 72px); background: #f9fbfd; }
-.rentout-head{ display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px; }
-.rentout-head h1{ font-size:32px; margin:0; color:var(--blue); }
-.rentout-controls{ display:flex; gap:12px; align-items:center; }
+.rentout-page{ padding:20px 0 40px; min-height: calc(100vh - 72px); background: #f9fbfd; }
+.rentout-head{ text-align:center; margin:8px 0 18px; }
+.rentout-head.centered h1{ font-size:44px; margin:8px 0 12px; color:#111; font-weight:700; }
+.add-device-wrap{ display:flex; justify-content:center; }
+.add-device-wrap .btn-cta{ padding:10px 18px; height:40px; }
 .input-search{ padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; min-width:240px; }
 .select-filter{ padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; background:#fff; }
 
@@ -292,38 +345,85 @@ body{
 /* card/grid layout for rent-out items (replaces table) */
 .rentout-list .rentout-cards{
   display:grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap:24px;
+  grid-template-columns: repeat(3, 1fr);
+  gap:36px;
+  justify-items:center;
+  align-items:start;
 }
 .rentout-card{
-  background:#fff;
-  border-radius:12px;
-  box-shadow:0 12px 30px rgba(15,30,60,0.06);
-  padding:20px;
+  width: 360px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(11,35,70,0.08);
+  overflow: visible;
   display:flex;
   flex-direction:column;
-  gap:14px;
 }
-.card-top{ display:flex; gap:16px; align-items:center; }
-.card-media{
-  width:140px;
-  height:88px;
-  border-radius:8px;
-  background:linear-gradient(135deg,#cfe8ff 0%, #eaf6ff 100%);
-  flex-shrink:0;
-  box-shadow:0 8px 20px rgba(2,6,23,0.06);
+.card-media-large{
+  width:100%;
+  height:160px;
+  background: linear-gradient(180deg,#cfe8ff 0%, #eaf6ff 100%);
+  border-top-left-radius:12px;
+  border-top-right-radius:12px;
 }
-.card-info{ display:flex; flex-direction:column; gap:6px; }
-.device-name{ font-size:20px; margin:0; color:#111; font-weight:700; }
-.meta{ font-size:14px; color:#667085; }
+.card-content{ padding:24px; display:flex; flex-direction:column; gap:10px; }
+.device-name{ font-size:20px; font-weight:700; color:#111; margin:0; }
+.meta.small{ font-size:13px; color:#667085; }
+.card-divider{ height:1px; background:#eef2f6; margin:12px 0; }
+.card-footer{ display:flex; align-items:center; gap:12px; }
+.avatar{ width:48px; height:48px; border-radius:50%; background:#fff; border:6px solid #fff; box-shadow:0 6px 20px rgba(11,35,70,0.08); background-color:#fdeff0; }
+.lessee{ display:flex; align-items:center; gap:12px; justify-content:space-between; width:100%; }
+.lessee-name{ font-weight:600; color:#111; }
+.btn-outline{ padding:8px 12px; height:36px; }
 
-.card-body{ display:flex; flex-direction:column; gap:8px; border-top:1px solid #f1f4f6; padding-top:12px; }
-.card-body .row{ display:flex; justify-content:space-between; align-items:center; color:#334155; font-weight:600; }
-.card-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:4px; }
+/* ensure avatars are perfectly round everywhere */
+.avatar{ border-radius:999px; overflow:hidden; flex:0 0 auto; }
+
+/* mini cart / favorites popup styles (used by navpopups.js) */
+.mini-cart{ background:transparent; z-index:9999; }
+.mini-cart .mini-cart-inner{ width:320px; box-shadow:0 6px 24px rgba(0,0,0,0.12); background:#fff; border-radius:8px; padding:12px; }
+.mini-cart .mini-cart-close{ float:right; border:0; background:transparent; font-size:20px; cursor:pointer; color:#111; }
+.mini-item{ display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid #f2f2f2; gap:10px; }
+.mini-item .mini-name{ font-weight:600; }
+.mini-meta{ font-size:12px; color:#666; }
+.mini-item-right{ display:flex; gap:10px; align-items:center; justify-content:flex-end; }
+.mini-delete,.mini-fav-delete{ background:transparent; border:0; cursor:pointer; color:#0b61d6; font-weight:600; }
+.mini-empty{ color:#666; padding:10px 6px; }
+.mini-cart-footer{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px; }
+.mini-cart-total{ color:#111; font-weight:600; }
+
+/* ghost buttons inside white popup should be dark */
+.mini-cart .mini-cart-inner .btn-ghost{ color:#111; border:1px solid rgba(0,0,0,0.12); }
+
+/* make Review button text visible and dark inside cards */
+.rentout-card .btn-outline{ color:#0f1724; border:1px solid #e6e9ef; background:transparent; }
+
+/* small Confirm button used next to status */
+.btn-confirm{
+  padding:6px 10px;
+  height:30px;
+  font-size:13px;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  border:0;
+  cursor:pointer;
+  margin-left:10px;
+}
+.status-row{ display:flex; align-items:center; gap:8px; }
+
+@media (max-width:1100px){
+  .rentout-list .rentout-cards{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width:720px){
+  .rentout-list .rentout-cards{ grid-template-columns: 1fr; }
+  .rentout-head.centered h1{ font-size:32px; }
+}
 
 /* ensure badges look consistent */
 .badge{ display:inline-block; padding:6px 10px; border-radius:999px; font-weight:600; font-size:13px; }
 .badge-active{ background:#e6f5ff; color:#0366a6; }
+.badge-rented{ background:#e6f5ff; color:#0366a6; }
 .badge-returned{ background:#effaf0; color:#1f8a3d; }
 .badge-late{ background:#fff5f5; color:#b91c1c; }
 
@@ -397,6 +497,80 @@ body{
 /* textarea slightly taller */
 .modal-form textarea{ resize:vertical; min-height:84px; }
 
+/* Review modal styles */
+.review-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(8,20,40,0.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:130;
+  padding:28px;
+}
+.review-overlay.open{ display:flex; }
+.review-modal{
+  width:100%;
+  max-width:720px;
+  background:#fff;
+  border-radius:8px;
+  box-shadow:0 30px 80px rgba(2,6,23,0.35);
+  padding:24px 28px;
+  position:relative;
+}
+.review-modal h3{ margin:0 0 12px; font-size:18px; }
+.review-body{ display:flex; flex-direction:column; gap:12px; }
+.review-lessee{ display:flex; align-items:center; gap:12px; }
+.review-avatar{ width:52px; height:52px; border-radius:50%; background:#fdeff0; box-shadow:0 6px 20px rgba(11,35,70,0.08); }
+.review-lessee-name{ font-weight:600; }
+.review-stars{ display:flex; gap:8px; font-size:28px; color:#f59e0b; }
+.review-stars .star{ background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.12); }
+.review-stars .star.active{ color:#f59e0b; }
+
+/* Make the selectable star rating (0–5) bigger */
+#reviewStars{ gap:10px; font-size:44px; }
+#reviewStars .star{ font-size:44px; line-height:1; width:44px; height:44px; }
+.review-label{ font-weight:600; margin-top:8px; }
+.review-modal textarea{ width:100%; padding:12px; border-radius:8px; border:1px solid #e6e9ef; min-height:140px; }
+.review-modal .modal-actions{ display:flex; justify-content:center; margin-top:12px; }
+
+/* history-specific styles */
+.hidden{ display:none !important; }
+.review-history.header .review-avatar{ width:72px; height:72px; }
+.review-history .review-lessee.header{ align-items:center; gap:18px; }
+.review-list{ display:flex; flex-direction:column; gap:18px; margin-top:8px; max-height:360px; overflow:auto; padding-right:6px; }
+.review-entry{ display:flex; gap:14px; align-items:flex-start; padding:12px 6px; border-radius:8px; }
+.entry-avatar{ width:44px; height:44px; border-radius:50%; background:#fff; border:6px solid #fff; box-shadow:0 6px 18px rgba(11,35,70,0.06); background-color:#fdeff0; flex:0 0 44px; }
+.entry-body{ display:flex; flex-direction:column; gap:6px; }
+.entry-head{ display:flex; gap:10px; align-items:center; color:#334155; }
+.entry-time{ font-size:13px; color:#94a3b8; }
+.entry-stars{ color:#f59e0b; font-size:14px; }
+.entry-text{ color:#0f1724; font-size:15px; max-width:680px; }
+.entry-actions{ display:flex; gap:8px; align-items:center; color:#94a3b8; font-size:13px; }
+
+/* Thumb up/down buttons: match rentdevice like/dislike styling */
+.thumb-like, .thumb-dislike{
+  background:#fff;
+  border:1px solid #eee;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  color:#0f1724;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.thumb-like:hover, .thumb-dislike:hover{ background:#f7f7f7; }
+.thumb-like.active, .thumb-dislike.active{ background:#e6f7ff; border-color:#60a5fa; color:#0b61d6; }
+.linkish{ background:none;border:none;color:#a3b1c6;cursor:pointer;padding:0;font-weight:600 }
+.muted{ color:#94a3b8; margin-left:6px }
+
+/* larger review modal to match design */
+.review-modal{ max-width:1042px; width:100%; padding:36px; border-radius:10px; }
+.review-modal .modal-actions{ justify-content:flex-end }
+.history-actions{ justify-content:flex-end }
+
+
 /* modal actions */
 .modal-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:6px; }
 
@@ -441,6 +615,7 @@ body{
 @media (max-width:480px){
   .header-inner{height:64px;padding:0 12px}
   .logo-text{font-size:18px}
+  .logo-mark{ width:44px; height:44px; }
   .hero{padding:40px 0;min-height:calc(100vh - 64px)}
   .hero-title{font-size:28px}
   .alt-title{font-size:28px}
@@ -464,3 +639,93 @@ body{
   border-radius: 8px;
   text-decoration: none;
 }
+
+/* Rent type page tweaks: pull content up and center */
+.renttype-page{ padding:20px 0 60px; min-height: calc(100vh - 72px); display:flex; align-items:flex-start; justify-content:center; }
+.renttype-page .container{ padding-top:6px; }
+.renttype-grid{ display:flex; gap:48px; justify-content:center; align-items:flex-start; }
+.renttype-card{ width:320px; }
+.renttype-cta{ margin-top:18px; display:flex; gap:12px; justify-content:center; }
+
+/* Filters (shown on search results only) */
+.result-filters{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:6px 0 18px;
+  width:100%;
+}
+.filter-select{
+  height:44px;
+  padding:10px 44px 10px 16px;
+  border:1px solid #e6e9ef;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  font-size:15px;
+  text-align:left;
+  text-align-last:left;
+  box-sizing:border-box;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%23334345' d='M6 8L0 0h12z'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:12px 8px;
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+
+/* Visual style for renttype cards to match provided screenshot */
+.renttype-card{
+  width:360px;
+  background:#fff;
+  border-radius:12px;
+  padding:28px 24px 30px;
+  box-shadow: 0 40px 120px rgba(11,35,70,0.06);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.renttype-visual{
+  width:300px;
+  height:300px;
+  background:#cfe8ff;
+  border-radius:8px;
+  margin-bottom:22px;
+}
+.renttype-label{
+  text-align:center;
+  font-weight:600;
+  color:#111;
+  margin-top:6px;
+}
+
+/* Search/result cards — white background (replace previous blue variant) */
+.result-card{
+  width:360px;
+  background:#fff;
+  border-radius:12px;
+  padding:0;
+  box-shadow: 0 30px 80px rgba(11,35,70,0.06);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  margin:0 12px;
+}
+.result-card .card-media-large{ height:180px; background: linear-gradient(180deg,#eaf6ff 0%, #f7fbff 100%); }
+.result-card .card-content{ padding:20px; }
+
+/* Header search box */
+.header-search{ display:flex; gap:8px; align-items:center; margin-left:12px; }
+.header-search input{ padding:8px 10px; border-radius:8px; border:1px solid #e6e9ef; width:280px; }
+.header-search .btn-cta{ padding:8px 12px; height:36px; }
+.nav a#navSearchBtn{ cursor:pointer; }
+
+/* header layout adjustments: ensure header-search sits between logo and nav */
+.header-inner{ display:flex; align-items:center; gap:12px; }
+.header-inner .logo{ flex:0 0 auto }
+.header-inner .header-search{ flex:0 0 auto }
+.header-inner .nav{ margin-left:auto; }
+.header-actions{ margin-left:12px }

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Rent Types</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo"><div class="logo-mark"></div><div class="logo-text">NOTELET</div></a>
+
+      <nav class="nav">
+          <div id="headerSearch" class="header-search hidden">
+            <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
+            <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
+          </div>
+          <a href="#" id="navSearchBtn">Search</a>
+            <a href="#" id="headerCartBtn">Cart</a>
+            <a href="#" id="headerFavBtn">Favorites</a>
+            <a href="/devicehistory">History</a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="/rentout" class="btn btn-ghost">Rent out</a>
+        <a href="/login" class="btn btn-primary">Log in</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="renttype-page">
+      <div class="container">
+        <div style="text-align:center;">
+          <h1 style="font-size:56px;margin-bottom:28px;font-weight:700;color:#111;">Renting Service</h1>
+        </div>
+        <div class="renttype-grid">
+
+          <a class="renttype-card" href="/renttypedevice?type=notebook">
+            <div class="renttype-visual"></div>
+            <div class="renttype-label">Notebook</div>
+          </a>
+
+          <a class="renttype-card" href="/renttypedevice?type=tablet">
+            <div class="renttype-visual"></div>
+            <div class="renttype-label">Tablet</div>
+          </a>
+
+          <a class="renttype-card" href="/renttypedevice?type=others">
+            <div class="renttype-visual"></div>
+            <div class="renttype-label">Others</div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/navpopups.js"></script>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+</body>
+</html>
