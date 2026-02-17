@@ -6,6 +6,7 @@
   <title>Notelet — Rent Device</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
   <style>
     /* Small, page-specific layout to approximate the provided design */
     .rent-device { display:flex; gap:48px; padding:48px 0; justify-content:center; align-items:flex-start; max-width:1200px; margin:0 auto; }
@@ -175,6 +176,13 @@
     </div>
   </div>
 
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script src="/navpopups.js"></script>
   <script>
     // read query params
     function getQueryParam(name){

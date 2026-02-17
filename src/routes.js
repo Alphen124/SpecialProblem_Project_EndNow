@@ -15,6 +15,11 @@ function setRoutes(app) {
         res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
     });
 
+    // Register page
+    app.get('/register', (req, res) => {
+        res.sendFile(path.join(__dirname, '..', 'public', 'register.html'));
+    });
+
     // Rent-out history page
     app.get('/rentout', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'rentout.html'));

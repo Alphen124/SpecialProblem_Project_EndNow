@@ -6,6 +6,7 @@
   <title>Notelet — Borrow Device</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
   <style>
     /* Use the same layout as rentdevice but hide price for borrow flow */
     .price{ display:none; }
@@ -110,6 +111,12 @@
     </section>
   </main>
 
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
   <script>
     // read query params
     function getQueryParam(name){ const url = new URL(window.location.href); return url.searchParams.get(name); }

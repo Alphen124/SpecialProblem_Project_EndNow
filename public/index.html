@@ -3,9 +3,105 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Notelet — Home</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>Notelet — Smart Rental Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* Enhanced modern minimal homepage styles */
+    .hero {
+      background: linear-gradient(135deg, #043873 0%, #0a5ba8 50%, #4F9CF9 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(255,228,146,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: float 8s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-30px) scale(1.05); }
+    }
+    .hero-title {
+      font-size: clamp(48px, 7vw, 84px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff 0%, #FFE492 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 20px);
+      color: rgba(255,255,255,0.92);
+      max-width: 560px;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    .hero-cta .btn-cta {
+      background: #FFE492;
+      color: #043873;
+      padding: 18px 40px;
+      font-size: 18px;
+      font-weight: 600;
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(255,228,146,0.3);
+    }
+    .hero-cta .btn-cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255,228,146,0.4);
+    }
+    .section-alt {
+      background: #f8fafc;
+    }
+    .section-alt .alt-title {
+      color: #043873;
+      font-size: clamp(40px, 6vw, 72px);
+      background: linear-gradient(135deg, #043873 0%, #4F9CF9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .section-alt .btn-cta.alt {
+      background: #4F9CF9;
+      color: white;
+    }
+    .section-alt .btn-cta.alt:hover {
+      background: #3d8de6;
+    }
+    /* Header minimal style */
+    .site-header {
+      backdrop-filter: blur(10px);
+      background: rgba(4,56,115,0.95);
+    }
+    .header-actions .btn-primary {
+      background: #FFE492;
+      color: #043873;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .header-actions .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255,228,146,0.3);
+    }
+    .header-actions .btn-outline {
+      border-color: rgba(255,255,255,0.3);
+      color: #fff;
+      transition: all 0.2s;
+    }
+    .header-actions .btn-outline:hover {
+      border-color: #FFE492;
+      background: rgba(255,228,146,0.1);
+    }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -15,36 +111,30 @@
         <div class="logo-text">NOTELET</div>
       </a>
 
-        <nav class="nav">
-          <div id="headerSearch" class="header-search hidden">
-            <input id="headerSearchInput" type="search" placeholder="Search devices..." aria-label="Search devices">
-            <button id="headerSearchSubmit" class="btn btn-cta">Go</button>
-          </div>
-          <a href="#" id="navSearchBtn">Search</a>
-          <a href="#" id="headerCartBtn">Cart</a>
-          <a href="#" id="headerFavBtn">Favorites</a>
-          <a href="/devicehistory">History</a>
-        </nav>
+      <nav class="nav">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+      </nav>
 
       <div class="header-actions">
-        <a href="/rentout" class="btn btn-ghost">Rent out</a>
-        <a href="/login" class="btn btn-primary">Log in</a>
+        <a href="/login.html" class="btn btn-primary">Log in</a>
+        <a href="/register.html" class="btn btn-outline">Sign up</a>
       </div>
     </div>
   </header>
 
   <main>
     <!-- Hero (dark) -->
-    <section class="hero">
+    <section class="hero" id="features">
       <div class="container hero-inner">
         <div class="hero-copy">
           <h1 class="hero-title">
-            Rent Smart<br/>
-            Work Fast<br/>
+            Rent Smart.<br/>
+            Work Fast.
           </h1>
-          <p class="hero-sub">A rental management system where lessors and lessees can connect effortlessly — browse devices, confirm rentals, and track every step with confidence.</p>
+          <p class="hero-sub">Modern rental management system connecting lessors and lessees effortlessly. Browse devices, confirm rentals, and track everything with confidence.</p>
           <div class="hero-cta">
-            <a class="btn btn-cta" href="/renttype">Try Renting</a>
+            <a class="btn btn-cta" href="/login.html">Get Started</a>
           </div>
         </div>
 
@@ -53,16 +143,16 @@
     </section>
 
     <!-- Alternate section (white) with merged footer -->
-    <section class="section-alt">
+    <section class="section-alt" id="about">
       <div class="container hero-inner">
         <div class="hero-copy">
           <h2 class="alt-title">
-            Smart Borrow<br/>
-            Better Control<br/>
+            Smart Borrow.<br/>
+            Better Control.
           </h2>
-          <p class="alt-sub">A digital platform for faculties to register, lend, and approve device requests efficiently — simplifying the borrowing process for students and staff alike.</p>
+          <p class="alt-sub">Digital platform for faculties to register, lend, and approve device requests efficiently — simplifying the borrowing process for everyone.</p>
           <div class="hero-cta">
-            <a class="btn btn-cta alt" href="/borrowtype">Try Borrowing</a>
+            <a class="btn btn-cta alt" href="/login.html">Start Borrowing</a>
           </div>
         </div>
 
@@ -70,57 +160,40 @@
       </div>
 
       <!-- merged footer placed inside the borrowing section -->
-      <div class="merged-footer container">© Notelet</div>
+      <div class="merged-footer container">© 2026 Notelet. All rights reserved.</div>
     </section>
   </main>
 
-  <!-- footer removed (moved into section-alt) -->
-    <script src="/navpopups.js"></script>
-    <script>
-    // Per-header search behavior: replace the Search nav link with an input when clicked
-    (function(){
-      const navSearchBtn = document.getElementById('navSearchBtn');
-      const headerSearch = document.getElementById('headerSearch');
-      const headerSearchInput = document.getElementById('headerSearchInput');
-      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
-      if(!navSearchBtn || !headerSearch) return;
-
-      function showSearch(){
-        navSearchBtn.style.display = 'none';
-        headerSearch.classList.remove('hidden');
-        headerSearchInput && headerSearchInput.focus();
-      }
-      function hideSearch(){
-        headerSearch.classList.add('hidden');
-        navSearchBtn.style.display = '';
+  <script>
+    // Check if already logged in, redirect to main app
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check authentication status
+      const accessToken = localStorage.getItem('access_token');
+      const user = localStorage.getItem('user');
+      
+      if (accessToken && user) {
+        // User is logged in, redirect to main app
+        window.location.href = '/rentout.html';
+        return;
       }
 
-      navSearchBtn.addEventListener('click', (e)=>{ e.preventDefault(); showSearch(); });
-
-      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
-        const q = headerSearchInput.value.trim();
-        if(!q) return;
-        // redirect to results page using search mode
-        const url = '/renttypedevice?type=search&q=' + encodeURIComponent(q);
-        window.location.href = url;
-      });
-
-      headerSearchInput && headerSearchInput.addEventListener('keydown', (e)=>{
-        if(e.key === 'Enter'){
+      // Intercept all navigation and redirect to login (except anchor links)
+      const allLinks = document.querySelectorAll('a:not([href="/login.html"]):not([href="/register.html"])');
+      
+      allLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        
+        // Skip anchor links (internal page navigation)
+        if (href && href.startsWith('#')) {
+          return;
+        }
+        
+        link.addEventListener('click', (e) => {
           e.preventDefault();
-          headerSearchSubmit.click();
-        } else if(e.key === 'Escape'){
-          hideSearch();
-        }
+          window.location.href = '/login.html';
+        });
       });
-
-      // hide search when clicking outside
-      document.addEventListener('click', (e)=>{
-        if(!headerSearch.contains(e.target) && e.target !== navSearchBtn){
-          hideSearch();
-        }
-      });
-    })();
-    </script>
-</body>
-</html>
+    });
+  </script>
+  <script src="/auth.js"></script>
+  

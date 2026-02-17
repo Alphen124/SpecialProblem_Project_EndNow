@@ -1,3 +1,65 @@
+/* User popup card styles */
+.user-popup-card {
+  position: absolute;
+  right: 0;
+  top: 54px;
+  min-width: 220px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(4,56,115,0.13), 0 1.5px 6px rgba(0,0,0,0.07);
+  padding: 24px 20px 16px 20px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeInPop .18s cubic-bezier(.4,0,.2,1);
+}
+.user-popup-card.hidden {
+  display: none;
+}
+.user-popup-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4F9CF9 60%, #FFE492 100%);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(4,56,115,0.10);
+}
+.user-popup-name {
+  font-weight: 600;
+  color: #043873;
+  margin-bottom: 14px;
+  font-size: 1.08rem;
+}
+.user-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.user-popup-actions a {
+  text-decoration: none;
+  color: #4F9CF9;
+  font-weight: 500;
+  padding: 8px 0;
+  border-radius: 8px;
+  text-align: center;
+  transition: background 0.13s;
+}
+.user-popup-actions a:hover {
+  background: #f2f7ff;
+}
+@keyframes fadeInPop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* End user popup card styles */
 :root{
   --blue:#043873;
   --accent:#FFE492;

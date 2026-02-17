@@ -6,6 +6,7 @@
   <title>Notelet — Rent out History</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
 </head>
 <body>
   <header class="site-header">
@@ -80,7 +81,6 @@
               <div class="card-footer">
                 <div class="avatar" aria-hidden></div>
                 <div class="lessee">
-            <script src="/navpopups.js"></script>
                   <div class="lessee-name">John Smith</div>
                   <button class="btn btn-outline btn-review" data-id="2">Review</button>
                 </div>
@@ -195,6 +195,186 @@
     </div>
   </main>
   <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+
+    // Check for success message
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('added') === 'success') {
+      const deviceNo = urlParams.get('deviceNo');
+      setTimeout(() => {
+        alert('✅ Device added successfully! (Device #' + deviceNo + ')\nStatus: Available for rent');
+        // Clean URL
+        window.history.replaceState({}, document.title, '/rentout.html');
+      }, 300);
+    }
+
+    // Load user's devices from API
+    async function loadMyDevices() {
+      let token = localStorage.getItem('access_token');
+      // Fallback to getAuthToken from auth.js if available
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/devices/my', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success && result.data && result.data.data) {
+          displayDevices(result.data.data);
+        }
+      } catch (error) {
+        console.error('Error loading devices:', error);
+      }
+    }
+
+    // Display devices in the UI
+    function displayDevices(devices) {
+      const container = document.querySelector('.rentout-cards');
+      if (!container || !devices || devices.length === 0) return;
+
+      // Clear existing static cards
+      container.innerHTML = '';
+
+      devices.forEach(device => {
+        const card = createDeviceCard(device);
+        container.appendChild(card);
+      });
+    }
+
+    // Create device card HTML
+    function createDeviceCard(device) {
+      const article = document.createElement('article');
+      article.className = 'rentout-card';
+      article.dataset.id = device.deviceNo;
+      article.dataset.status = device.status || 'available';
+
+      // Map status to badge
+      const statusMap = {
+        1: { text: 'Available', class: 'badge-active' },
+        '1': { text: 'Available', class: 'badge-active' },
+        2: { text: 'Delivered', class: 'badge-rented' },
+        '2': { text: 'Delivered', class: 'badge-rented' },
+        3: { text: 'Returned', class: 'badge-returned' },
+        '3': { text: 'Returned', class: 'badge-returned' },
+        4: { text: 'Overdue', class: 'badge-overdue' },
+        '4': { text: 'Overdue', class: 'badge-overdue' }
+      };
+      const currentStatus = statusMap[device.status] || { text: 'Available', class: 'badge-active' };
+      const statusBadge = `<span class="badge ${currentStatus.class}">${currentStatus.text}</span>`;
+
+      // Status update buttons
+      const statusButtons = `
+        <div class="card-divider"></div>
+        <div class="card-footer" style="flex-direction: column; gap: 8px;">
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button class="btn btn-outline btn-view" data-id="${device.deviceNo}">View Details</button>
+          </div>
+          <div style="display: flex; gap: 8px; width: 100%; justify-content: space-between;">
+            <select class="status-select" data-device-id="${device.deviceNo}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              <option value="1" ${device.status == 1 ? 'selected' : ''}>Available</option>
+              <option value="2" ${device.status == 2 ? 'selected' : ''}>Delivered</option>
+              <option value="3" ${device.status == 3 ? 'selected' : ''}>Returned</option>
+              <option value="4" ${device.status == 4 ? 'selected' : ''}>Overdue</option>
+            </select>
+            <button class="btn btn-cta btn-update-status" data-device-id="${device.deviceNo}" style="white-space: nowrap;">Update</button>
+          </div>
+        </div>
+      `;
+
+      article.innerHTML = `
+        <div class="card-media-large" aria-hidden ${device.imageUrl ? `style="background-image:url('${device.imageUrl}'); background-size:cover;"` : ''}></div>
+        <div class="card-content">
+          <h3 class="device-name">${escapeHtml(device.name)}</h3>
+          <div class="meta small">Type · ${escapeHtml(device.type || 'Device')}</div>
+          <div class="meta small">Price · $${device.price}/day</div>
+          <div class="meta small">Rating · ${device.rating || 0} ⭐</div>
+          <div class="meta small status-row">Status · ${statusBadge}</div>
+          <div class="meta small">Added · ${device.createdAt ? new Date(device.createdAt).toLocaleDateString() : 'Recently'}</div>
+          ${statusButtons}
+        </div>
+      `;
+
+      return article;
+    }
+
+    // Simple HTML escaper
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Update device status
+    async function updateDeviceStatus(deviceId, statusNo) {
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) {
+        alert('Please login first');
+        return;
+      }
+
+      const statusMap = {
+        '1': 'Available',
+        '2': 'Delivered',
+        '3': 'Returned',
+        '4': 'Overdue'
+      };
+      const statusName = statusMap[statusNo];
+
+      try {
+        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ status: statusName })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          alert(`✅ Device status updated to: ${statusName}`);
+          // Reload devices to show updated status
+          loadMyDevices();
+        } else {
+          throw new Error(result.message || result.error || 'Failed to update status');
+        }
+      } catch (error) {
+        console.error('Error updating status:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Handle status update button clicks
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-update-status');
+      if (!btn) return;
+
+      const deviceId = btn.dataset.deviceId;
+      const selectEl = document.querySelector(`.status-select[data-device-id="${deviceId}"]`);
+      if (!selectEl) return;
+
+      const newStatus = selectEl.value;
+      updateDeviceStatus(deviceId, newStatus);
+    });
+
+    // Load devices when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMyDevices();
+    });
+  </script>
+  <script src="/navpopups.js"></script>
+  <script>
     (function(){
       const navSearchBtn = document.getElementById('navSearchBtn');
       const headerSearch = document.getElementById('headerSearch');
@@ -243,14 +423,14 @@
             <label for="deviceType">Device Type</label>
             <select id="deviceType" name="deviceType" required>
               <option value="">Select type</option>
-              <option>Laptop</option>
-              <option>Tablet</option>
-              <option>Others</option>
+              <option value="Notebook">Notebook</option>
+              <option value="MacBook">MacBook</option>
+              <option value="Other">Other</option>
             </select>
           </div>
           <div>
-            <label for="price">Price</label>
-            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00">
+            <label for="price">Price / Day</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00" required>
           </div>
         </div>
 
@@ -297,19 +477,85 @@
     overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
 
     // simple submit handler (replace with real API call)
-    form && form.addEventListener('submit', (e)=>{
+    form && form.addEventListener('submit', async (e)=>{
       e.preventDefault();
-      // collect fields
-      const data = {
-        deviceName: form.deviceName.value.trim(),
-        deviceType: form.deviceType.value,
-        price: form.price.value,
-        description: form.description.value
+      
+      // Get token (use correct key name: access_token)
+      let token = localStorage.getItem('access_token');
+      // Fallback to getAuthToken from auth.js if available
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) {
+        alert('Please login first');
+        window.location.href = '/login.html';
+        return;
+      }
+
+      // Collect fields
+      const deviceName = form.deviceName.value.trim();
+      const deviceType = form.deviceType.value;
+      const price = parseFloat(form.price.value);
+      const description = form.description.value.trim();
+      const imageFile = form.image.files[0];
+
+      if (!deviceName || !deviceType || !price) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      // Prepare data
+      const deviceData = {
+        name: deviceName,
+        type: deviceType,
+        price: price,
+        description: description,
+        imageUrl: '' // TODO: Upload image to server first if needed
       };
-      console.log('Add rent (demo):', data);
-      // TODO: POST to /api/rentouts
-      closeModal();
-      // optionally show toast or add a new card client-side
+
+      try {
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Adding...';
+
+        console.log('Sending device data:', deviceData);
+        console.log('Using token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
+
+        // Call API
+        const response = await fetch('http://localhost:3001/api/devices', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(deviceData)
+        });
+
+        console.log('Response status:', response.status, response.statusText);
+        
+        const result = await response.json();
+        console.log('Response body:', result);
+
+        if (response.ok && result.success) {
+          closeModal();
+          form.reset();
+          // Redirect to same page with success message
+          window.location.href = '/rentout.html?added=success&deviceNo=' + result.data.deviceNo;
+        } else {
+          const errorMsg = result.message || result.error || 'Failed to add device';
+          console.error('Server error:', errorMsg);
+          throw new Error(errorMsg);
+        }
+      } catch (error) {
+        console.error('Error adding device:', error);
+        alert('Error: ' + error.message + '\n\nPlease check console for details.');
+        // Re-enable submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm';
+      }
     });
 
     // Review modal logic (history + write views)
@@ -430,9 +676,6 @@
         dislikeBtn && dislikeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); dislikeCountEl && (dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1)); if(now==='like'){ likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); likeBtn && likeBtn.classList.remove('active'); } } });
       }catch(e){ /* ignore wiring errors */ }
     });
-
-    // simple HTML escaper
-    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     // Confirm modal logic for requested items
     const confirmOverlay = document.getElementById('confirmOverlay');

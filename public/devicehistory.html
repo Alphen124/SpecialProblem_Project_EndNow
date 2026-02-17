@@ -6,6 +6,7 @@
   <title>Notelet — Device History</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
   <style>
     /* Borrow cards on history page: blue background + white text (match screenshot) */
     .rentout-card.borrow-card{ box-shadow:0px 4px 4px rgba(0,0,0,0.25); }
@@ -120,6 +121,12 @@
     </div>
   </div>
 
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
   <script>
     const CART_KEY = 'notelet_cart_v1';
     const HISTORY_KEY = 'notelet_history_v1';

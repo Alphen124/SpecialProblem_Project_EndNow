@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NoteLet — Create Account</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/auth.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .register-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 0;
+    }
+
+    .register-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 48px;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .register-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .register-header .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .register-header .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .register-header .logo-text {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .register-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1a202c;
+      margin-bottom: 8px;
+    }
+
+    .register-subtitle {
+      color: #64748b;
+      font-size: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #374151;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 16px 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .form-row .form-group {
+      margin-bottom: 0;
+    }
+
+    .register-btn {
+      width: 100%;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .register-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+    }
+
+    .register-btn:active {
+      transform: translateY(0);
+    }
+
+    .register-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .divider {
+      text-align: center;
+      position: relative;
+      margin: 32px 0;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #e5e7eb;
+    }
+
+    .divider span {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 0 16px;
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .login-link {
+      text-align: center;
+    }
+
+    .login-link a {
+      color: #667eea;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+
+    .login-link a:hover {
+      color: #5a67d8;
+    }
+
+    .error-message {
+      background: #fee2e2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      color: #b91c1c;
+      font-size: 14px;
+      display: none;
+    }
+
+    .success-message {
+      background: #d1fae5;
+      border: 1px solid #a7f3d0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      color: #065f46;
+      font-size: 14px;
+      display: none;
+    }
+
+    .info-box {
+      margin-top: 24px;
+      padding: 20px;
+      background: rgba(102, 126, 234, 0.1);
+      border: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 12px;
+    }
+
+    .info-box p {
+      color: #4c51bf;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .info-box strong {
+      color: #3730a3;
+    }
+
+    .home-link {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .home-link:hover {
+      color: white;
+    }
+
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .register-container {
+        padding: 32px 24px;
+      }
+      
+      .register-title {
+        font-size: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="/" class="home-link">← Back to Home</a>
+
+  <main>
+    <section class="register-page">
+      <div class="register-container">
+        <div class="register-header">
+          <h1 class="register-title">Create Account</h1>
+          <p class="register-subtitle">Join our KMITL device rental system</p>
+        </div>
+
+        <div id="errorMessage" class="error-message"></div>
+        <div id="successMessage" class="success-message"></div>
+
+        <form id="registerForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fname">First Name *</label>
+              <input type="text" id="fname" placeholder="Enter first name" required>
+            </div>
+            <div class="form-group">
+              <label for="lname">Last Name *</label>
+              <input type="text" id="lname" placeholder="Enter last name" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">KMITL Email *</label>
+            <input type="email" id="email" placeholder="65010001@kmitl.ac.th" required>
+          </div>
+
+          <div class="form-group">
+            <label for="tel">Phone Number *</label>
+            <input type="tel" id="tel" placeholder="0812345678" pattern="[0-9]{9,10}" required>
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password *</label>
+            <input type="password" id="password" placeholder="Enter password" minlength="6" required>
+          </div>
+
+          <div class="form-group">
+            <label for="confirmPassword">Confirm Password *</label>
+            <input type="password" id="confirmPassword" placeholder="Confirm password" minlength="6" required>
+          </div>
+
+          <button type="submit" class="register-btn" id="registerBtn">Create Account</button>
+        </form>
+
+        
+
+        <div class="login-link">
+          <p>Already have an account? <a href="/login.html">Sign in here</a></p>
+        </div>
+
+        <div class="info-box">
+          <p>
+            <strong>📋 Requirements:</strong><br>
+            • Use @kmitl.ac.th email only<br>
+            • Password must be at least 6 characters<br>
+            • Phone number must be 9-10 digits
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE = 'http://localhost:3001';
+
+    // Redirect if already logged in
+    if (typeof NoteLetAuth !== 'undefined' && NoteLetAuth.redirectIfAuthenticated) {
+      NoteLetAuth.redirectIfAuthenticated();
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Get form values
+      const fname = document.getElementById('fname').value.trim();
+      const lname = document.getElementById('lname').value.trim();
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const tel = document.getElementById('tel').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      // Get message divs
+      const errorDiv = document.getElementById('errorMessage');
+      const successDiv = document.getElementById('successMessage');
+      const registerBtn = document.getElementById('registerBtn');
+      
+      // Reset messages
+      hideMessages();
+
+      // Validation
+      if (!fname || !lname || !email || !tel || !password || !confirmPassword) {
+        showError('Please fill in all required fields');
+        return;
+      }
+
+      if (fname.length < 2) {
+        showError('First name must be at least 2 characters');
+        return;
+      }
+
+      if (lname.length < 2) {
+        showError('Last name must be at least 2 characters');
+        return;
+      }
+
+      if (!email.includes('@')) {
+        showError('Please enter a valid email address');
+        return;
+      }
+
+      if (!email.endsWith('@kmitl.ac.th')) {
+        showError('Please use @kmitl.ac.th email only');
+        return;
+      }
+
+      if (!/^[0-9]{9,10}$/.test(tel)) {
+        showError('Phone number must be 9-10 digits (numbers only)');
+        return;
+      }
+
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('Passwords do not match');
+        return;
+      }
+
+      // Disable button and show loading
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Creating Account...';
+
+      try {
+        // Send registration request
+        const response = await fetch(`${API_BASE}/api/auth/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: email,
+            password: password,
+            fname: fname,
+            lname: lname,
+            tel: tel
+          })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          showSuccess('Account created successfully! Redirecting to login...');
+          setTimeout(() => {
+            window.location.href = '/login.html';
+          }, 2000);
+        } else {
+          showError(result.message || 'Failed to create account');
+          resetButton();
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        showError('An error occurred: ' + error.message);
+        resetButton();
+      }
+    });
+
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      
+      // Scroll to error if needed
+      errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('successMessage');
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      
+      // Scroll to success message
+      successDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideMessages() {
+      const errorDiv = document.getElementById('errorMessage');
+      const successDiv = document.getElementById('successMessage');
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      errorDiv.textContent = '';
+      successDiv.textContent = '';
+    }
+
+    function resetButton() {
+      const registerBtn = document.getElementById('registerBtn');
+      registerBtn.disabled = false;
+      registerBtn.textContent = 'Create Account';
+    }
+
+    // Real-time validation feedback
+    document.getElementById('email').addEventListener('input', function() {
+      const email = this.value.trim().toLowerCase();
+      if (email && !email.endsWith('@kmitl.ac.th') && email.includes('@')) {
+        this.style.borderColor = '#f87171';
+      } else {
+        this.style.borderColor = '#e5e7eb';
+      }
+    });
+
+    document.getElementById('confirmPassword').addEventListener('input', function() {
+      const password = document.getElementById('password').value;
+      const confirmPassword = this.value;
+      
+      if (confirmPassword && password !== confirmPassword) {
+        this.style.borderColor = '#f87171';
+      } else {
+        this.style.borderColor = '#e5e7eb';
+      }
+    });
+
+    document.getElementById('tel').addEventListener('input', function() {
+      const tel = this.value.trim();
+      if (tel && !/^[0-9]{9,10}$/.test(tel)) {
+        this.style.borderColor = '#f87171';
+      } else {
+        this.style.borderColor = '#e5e7eb';
+      }
+    });
+  </script>
+</body>
+</html>
