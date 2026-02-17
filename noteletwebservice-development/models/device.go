@@ -13,6 +13,7 @@ type Device struct {
 	Rating       float64   `json:"rating"`
 	UserId       int       `json:"userId"`
 	Status       string    `json:"status"`
+	Condition    string    `json:"condition,omitempty"`
 	ImageUrl     string    `json:"imageUrl,omitempty"`
 	CreatedAt    time.Time `json:"createdAt"`
 }

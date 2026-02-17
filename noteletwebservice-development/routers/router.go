@@ -41,6 +41,26 @@ func SetupRoutes(authController *controllers.AuthController, oauthController *co
 	deviceMux.HandleFunc("/api/devices", deviceController.CreateDevice)
 	deviceMux.HandleFunc("/api/devices/my", deviceController.GetMyDevices)
 	deviceMux.HandleFunc("/api/devices/", func(w http.ResponseWriter, r *http.Request) {
+		// Extract device ID from path
+		path := r.URL.Path
+		if path == "/api/devices/" {
+			http.Error(w, "Device ID is required", http.StatusBadRequest)
+			return
+		}
+
+		// Check if it's a status update endpoint
+		if len(path) > len("/api/devices/") {
+			parts := path[len("/api/devices/"):]
+			if len(parts) > 0 && r.Method == http.MethodPatch {
+				// Check if path ends with /status
+				if len(parts) > 7 && parts[len(parts)-7:] == "/status" {
+					deviceController.UpdateDeviceStatus(w, r)
+					return
+				}
+			}
+		}
+
+		// Handle regular device operations
 		if r.Method == http.MethodGet {
 			deviceController.GetDevice(w, r)
 		} else if r.Method == http.MethodDelete {

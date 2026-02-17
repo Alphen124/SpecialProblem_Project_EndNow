@@ -32,7 +32,7 @@ func main() {
 		clientSecret = "your-google-client-secret"
 	}
 	if redirectURL == "" {
-		redirectURL = "http://localhost:8080/api/auth/google/callback"
+		redirectURL = "http://localhost:3001/api/auth/google/callback"
 	}
 
 	oauth.InitGoogleOAuth(clientID, clientSecret, redirectURL)
@@ -60,7 +60,7 @@ func main() {
 	handler := routers.ApplyCORS(mux)
 
 	// กำหนด port
-	port := ":8080"
+	port := ":3001"
 
 	// Start server
 	if err := http.ListenAndServe(port, handler); err != nil {
