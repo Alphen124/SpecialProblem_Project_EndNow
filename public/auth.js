@@ -202,7 +202,6 @@ function updateHeaderForAuth() {
                     <div class="user-popup-avatar">${userName.charAt(0).toUpperCase()}</div>
                     <div class="user-popup-name">${userName}</div>
                     <div class="user-popup-actions">
-                        <a href="#" onclick="viewProfile(); return false;">ดูโปรไฟล์</a>
                         <a href="#" onclick="logout(); return false;">ออกจากระบบ</a>
                     </div>
                 </div>

@@ -7,6 +7,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script src="/auth.js"></script>
+  <style>
+    /* Make device cards clickable */
+    .rentout-card {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .rentout-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
   <header class="site-header">
@@ -132,32 +143,7 @@
             </div>
 
             <div class="review-list" id="reviewList">
-              <!-- sample entries (replaceable) -->
-              <div class="review-entry">
-                <div class="entry-avatar"></div>
-                <div class="entry-body">
-                  <div class="entry-head">
-                    <strong>Helen M.</strong>
-                    <span class="entry-time">Yesterday</span>
-                  </div>
-                  <div class="entry-stars">★ ★ ★ ★ ★</div>
-                  <div class="entry-text">Excellent running shoes. It turns very sharply on the foot.</div>
-                  <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
-                </div>
-              </div>
-
-              <div class="review-entry">
-                <div class="entry-avatar"></div>
-                <div class="entry-body">
-                  <div class="entry-head">
-                    <strong>Helen M.</strong>
-                    <span class="entry-time">Yesterday</span>
-                  </div>
-                  <div class="entry-stars">★ ★ ★ ★ ★</div>
-                  <div class="entry-text">Excellent running shoes. It turns very sharply on the foot.</div>
-                  <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
-                </div>
-              </div>
+              <!-- reviews loaded from database -->
             </div>
 
             <div class="modal-actions history-actions">
@@ -239,25 +225,64 @@
     }
 
     // Display devices in the UI
-    function displayDevices(devices) {
+    async function displayDevices(devices) {
       const container = document.querySelector('.rentout-cards');
       if (!container || !devices || devices.length === 0) return;
 
       // Clear existing static cards
       container.innerHTML = '';
 
-      devices.forEach(device => {
-        const card = createDeviceCard(device);
+      // Create cards sequentially to await async operations
+      for (const device of devices) {
+        const card = await createDeviceCard(device);
         container.appendChild(card);
-      });
+      }
+    }
+
+    // Store device history for status validation
+    const deviceHistoryCache = {};
+
+    // Check if device was ever delivered
+    async function wasDeviceEverDelivered(deviceId) {
+      // Check cache first
+      if (deviceHistoryCache[deviceId]) {
+        return deviceHistoryCache[deviceId].some(entry => entry.statusNo === 2);
+      }
+
+      // Fetch from server
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) return false;
+
+      try {
+        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/history`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await response.json();
+        if (response.ok && result.success && result.data) {
+          deviceHistoryCache[deviceId] = result.data;
+          return result.data.some(entry => entry.statusNo === 2);
+        }
+      } catch (error) {
+        console.error('Error checking delivery history:', error);
+      }
+      return false;
     }
 
     // Create device card HTML
-    function createDeviceCard(device) {
+    async function createDeviceCard(device) {
       const article = document.createElement('article');
       article.className = 'rentout-card';
       article.dataset.id = device.deviceNo;
       article.dataset.status = device.status || 'available';
+      article.dataset.name = device.name;
+      article.dataset.type = device.type;
+      article.dataset.price = device.price;
+      article.dataset.description = device.description || '';
+      article.dataset.imageUrl = device.imageUrl || '';
 
       // Map status to badge
       const statusMap = {
@@ -273,18 +298,28 @@
       const currentStatus = statusMap[device.status] || { text: 'Available', class: 'badge-active' };
       const statusBadge = `<span class="badge ${currentStatus.class}">${currentStatus.text}</span>`;
 
+      // Check if device was ever delivered
+      const wasDelivered = await wasDeviceEverDelivered(device.deviceNo);
+
+      // Cannot edit or delete if status is Delivered (2) or Overdue (4)
+      const canModify = device.status != 2 && device.status != 4;
+      const canDelete = device.status != 2 && device.status != 4;
+
       // Status update buttons
       const statusButtons = `
         <div class="card-divider"></div>
         <div class="card-footer" style="flex-direction: column; gap: 8px;">
           <div style="display: flex; gap: 8px; width: 100%;">
-            <button class="btn btn-outline btn-view" data-id="${device.deviceNo}">View Details</button>
+            <button class="btn btn-outline btn-edit" data-device-id="${device.deviceNo}" ${!canModify ? 'disabled title="Cannot edit device with Delivered/Overdue status"' : ''}>Edit</button>
+            <button class="btn btn-outline btn-delete" data-device-id="${device.deviceNo}" ${!canDelete ? 'disabled title="Cannot delete device with Delivered/Overdue status"' : ''} style="color: #d32f2f; border-color: #d32f2f;">Delete</button>
+            <button class="btn btn-outline btn-view-history" data-device-id="${device.deviceNo}">History</button>
+            <button class="btn btn-outline btn-review" data-device-id="${device.deviceNo}">Reviews</button>
           </div>
           <div style="display: flex; gap: 8px; width: 100%; justify-content: space-between;">
-            <select class="status-select" data-device-id="${device.deviceNo}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <select class="status-select" data-device-id="${device.deviceNo}" data-was-delivered="${wasDelivered}" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
               <option value="1" ${device.status == 1 ? 'selected' : ''}>Available</option>
               <option value="2" ${device.status == 2 ? 'selected' : ''}>Delivered</option>
-              <option value="3" ${device.status == 3 ? 'selected' : ''}>Returned</option>
+              <option value="3" ${device.status == 3 ? 'selected' : ''} ${!wasDelivered ? 'disabled' : ''}>Returned${!wasDelivered ? ' (Must be delivered first)' : ''}</option>
               <option value="4" ${device.status == 4 ? 'selected' : ''}>Overdue</option>
             </select>
             <button class="btn btn-cta btn-update-status" data-device-id="${device.deviceNo}" style="white-space: nowrap;">Update</button>
@@ -292,8 +327,22 @@
         </div>
       `;
 
+      // Get first image URL (handle JSON array or single URL)
+      let firstImageUrl = '';
+      if (device.imageUrl) {
+        try {
+          const imageUrls = JSON.parse(device.imageUrl);
+          if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+            firstImageUrl = imageUrls[0];
+          }
+        } catch {
+          // Not JSON, use as is
+          firstImageUrl = device.imageUrl;
+        }
+      }
+
       article.innerHTML = `
-        <div class="card-media-large" aria-hidden ${device.imageUrl ? `style="background-image:url('${device.imageUrl}'); background-size:cover;"` : ''}></div>
+        <div class="card-media-large" aria-hidden ${firstImageUrl ? `style="background-image:url('${firstImageUrl}'); background-size:cover;"` : ''}></div>
         <div class="card-content">
           <h3 class="device-name">${escapeHtml(device.name)}</h3>
           <div class="meta small">Type · ${escapeHtml(device.type || 'Device')}</div>
@@ -312,7 +361,84 @@
     function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
     // Update device status
-    async function updateDeviceStatus(deviceId, statusNo) {
+    async function updateDeviceStatus(deviceId, newStatus) {
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) {
+        alert('Please login first');
+        return false;
+      }
+
+      const statusMap = {
+        '1': 'Available',
+        '2': 'Delivered',
+        '3': 'Returned',
+        '4': 'Overdue'
+      };
+
+      try {
+        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: statusMap[newStatus]
+          })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+          return true;
+        } else {
+          throw new Error(result.message || 'Failed to update status');
+        }
+      } catch (error) {
+        console.error('Error updating device status:', error);
+        alert('Error: ' + error.message);
+        return false;
+      }
+    }
+
+    // Handle status update button clicks
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.btn-update-status');
+      if (!btn) return;
+
+      const deviceId = btn.dataset.deviceId;
+      const selectElement = document.querySelector(`.status-select[data-device-id="${deviceId}"]`);
+      
+      if (!selectElement) return;
+
+      const newStatus = selectElement.value;
+      const statusNames = { '1': 'Available', '2': 'Delivered', '3': 'Returned', '4': 'Overdue' };
+
+      // Disable button during update
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+
+      const success = await updateDeviceStatus(deviceId, newStatus);
+      
+      if (success) {
+        alert(`✅ Device status updated to: ${statusNames[newStatus]}`);
+        // Reload devices to show updated status
+        await loadMyDevices();
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Update';
+    });
+
+    // Status History Modal Functions
+    const statusHistoryOverlay = document.getElementById('statusHistoryOverlay');
+    const closeHistoryModal = document.getElementById('closeHistoryModal');
+    const statusHistoryContent = document.getElementById('statusHistoryContent');
+
+    async function loadDeviceHistory(deviceId) {
       let token = localStorage.getItem('access_token');
       if (!token && typeof getAuthToken === 'function') {
         token = getAuthToken();
@@ -322,50 +448,96 @@
         return;
       }
 
-      const statusMap = {
-        '1': 'Available',
-        '2': 'Delivered',
-        '3': 'Returned',
-        '4': 'Overdue'
-      };
-      const statusName = statusMap[statusNo];
+      statusHistoryContent.innerHTML = '<p style="text-align: center; color: #666;">Loading...</p>';
 
       try {
-        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/status`, {
-          method: 'PATCH',
+        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/history`, {
+          method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status: statusName })
+            'Authorization': `Bearer ${token}`
+          }
         });
 
         const result = await response.json();
-
-        if (response.ok && result.success) {
-          alert(`✅ Device status updated to: ${statusName}`);
-          // Reload devices to show updated status
-          loadMyDevices();
+        
+        if (response.ok && result.success && result.data) {
+          displayHistory(result.data);
         } else {
-          throw new Error(result.message || result.error || 'Failed to update status');
+          throw new Error(result.message || 'Failed to load history');
         }
       } catch (error) {
-        console.error('Error updating status:', error);
-        alert('Error: ' + error.message);
+        console.error('Error loading history:', error);
+        statusHistoryContent.innerHTML = `<p style="text-align: center; color: #d32f2f;">Error: ${error.message}</p>`;
       }
     }
 
-    // Handle status update button clicks
+    function displayHistory(history) {
+      if (!history || history.length === 0) {
+        statusHistoryContent.innerHTML = '<p style="text-align: center; color: #666;">No status changes yet.</p>';
+        return;
+      }
+
+      const historyHTML = history.map(entry => {
+        const date = new Date(entry.changedAt);
+        const formattedDate = date.toLocaleString('en-US', { 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+
+        const statusColors = {
+          'Available': '#4caf50',
+          'Delivered': '#2196f3',
+          'Returned': '#ff9800',
+          'Overdue': '#f44336'
+        };
+        const color = statusColors[entry.statusName] || '#666';
+
+        return `
+          <div style="border-left: 3px solid ${color}; padding: 12px 16px; margin-bottom: 12px; background: #f9f9f9; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+              <strong style="color: ${color}; font-size: 16px;">${entry.statusName}</strong>
+              <span style="color: #666; font-size: 13px;">${formattedDate}</span>
+            </div>
+            <div style="color: #666; font-size: 14px;">
+              Changed by: <strong>${entry.changedByEmail}</strong>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      statusHistoryContent.innerHTML = historyHTML;
+    }
+
+    function openHistoryModal(deviceId) {
+      statusHistoryOverlay.setAttribute('aria-hidden', 'false');
+      statusHistoryOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      loadDeviceHistory(deviceId);
+    }
+
+    function closeHistoryModalFunc() {
+      statusHistoryOverlay.setAttribute('aria-hidden', 'true');
+      statusHistoryOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // Handle view history button clicks
     document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.btn-update-status');
+      const btn = e.target.closest('.btn-view-history');
       if (!btn) return;
-
+      
       const deviceId = btn.dataset.deviceId;
-      const selectEl = document.querySelector(`.status-select[data-device-id="${deviceId}"]`);
-      if (!selectEl) return;
+      if (deviceId) {
+        openHistoryModal(deviceId);
+      }
+    });
 
-      const newStatus = selectEl.value;
-      updateDeviceStatus(deviceId, newStatus);
+    closeHistoryModal && closeHistoryModal.addEventListener('click', closeHistoryModalFunc);
+    statusHistoryOverlay && statusHistoryOverlay.addEventListener('click', (e) => {
+      if (e.target === statusHistoryOverlay) closeHistoryModalFunc();
     });
 
     // Load devices when page loads
@@ -374,6 +546,8 @@
     });
   </script>
   <script src="/navpopups.js"></script>
+  <script src="/device-edit-delete.js"></script>
+  <script src="/image-upload.js"></script>
   <script>
     (function(){
       const navSearchBtn = document.getElementById('navSearchBtn');
@@ -394,7 +568,7 @@
     })();
   </script>
 
-  <!-- Confirm Modal for requested items -->
+  <!-- Confirm Modal for requested  items -->
   <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <button class="modal-close" id="closeConfirm" aria-label="Close">&times;</button>
@@ -440,8 +614,13 @@
         </div>
 
         <div class="form-row">
-          <label for="imageUpload">Upload Image</label>
-          <input id="imageUpload" name="image" type="file" accept="image/*">
+          <label for="imageUpload">Upload Images (Max 5 images)</label>
+          <input id="imageUpload" name="images" type="file" accept="image/*" multiple>
+          <small style="color: #666; margin-top: 4px; display: block;">Hold Ctrl/Cmd to select multiple images. Max 10MB per image.</small>
+        </div>
+
+        <div id="imagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
+          <!-- Image previews will appear here -->
         </div>
 
         <div class="modal-actions">
@@ -449,6 +628,68 @@
           <button type="button" id="cancelModal" class="btn btn-outline">Cancel</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Edit Device Modal -->
+  <div id="editModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <button class="modal-close" id="closeEditModal" aria-label="Close">&times;</button>
+      <h2 id="editModalTitle" class="modal-title">Edit Device</h2>
+      <form id="editDeviceForm" class="modal-form" autocomplete="off">
+        <input type="hidden" id="editDeviceId" name="deviceId">
+        <div class="form-row">
+          <label for="editDeviceName">Device Name</label>
+          <input id="editDeviceName" name="deviceName" type="text" required placeholder="e.g. MacBook Pro 13\"">
+        </div>
+
+        <div class="form-row form-row--split">
+          <div>
+            <label for="editDeviceType">Device Type</label>
+            <select id="editDeviceType" name="deviceType" required>
+              <option value="">Select type</option>
+              <option value="Notebook">Notebook</option>
+              <option value="MacBook">MacBook</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="editPrice">Price / Day</label>
+            <input id="editPrice" name="price" type="number" min="0" step="0.01" placeholder="0.00" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" name="description" rows="4" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="editImages">Images (Max 5 images)</label>
+          <input id="editImages" name="images" type="file" accept="image/*" multiple>
+          <small style="color: #666; margin-top: 4px; display: block;">Hold Ctrl/Cmd to select multiple images. Max 10MB per image.</small>
+        </div>
+
+        <div id="editImagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
+          <!-- Image previews will appear here -->
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-cta">Update</button>
+          <button type="button" id="cancelEditModal" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Status History Modal -->
+  <div id="statusHistoryOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle" style="max-width: 700px;">
+      <button class="modal-close" id="closeHistoryModal" aria-label="Close">&times;</button>
+      <h2 id="historyModalTitle" class="modal-title">Status Change History</h2>
+      <div id="statusHistoryContent" style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
+        <p style="text-align: center; color: #666;">Loading...</p>
+      </div>
     </div>
   </div>
 
@@ -497,31 +738,47 @@
       const deviceType = form.deviceType.value;
       const price = parseFloat(form.price.value);
       const description = form.description.value.trim();
-      const imageFile = form.image.files[0];
+      const imageFiles = form.images ? form.images.files : [];
 
       if (!deviceName || !deviceType || !price) {
         alert('Please fill in all required fields');
         return;
       }
 
-      // Prepare data
-      const deviceData = {
-        name: deviceName,
-        type: deviceType,
-        price: price,
-        description: description,
-        imageUrl: '' // TODO: Upload image to server first if needed
-      };
-
       try {
         // Show loading state
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Adding...';
+        submitBtn.textContent = 'Uploading...';
 
+        // Upload images first
+        let imageUrls = [];
+        if (imageFiles && imageFiles.length > 0) {
+          submitBtn.textContent = `Uploading ${imageFiles.length} image(s)...`;
+          try {
+            imageUrls = await uploadDeviceImages(imageFiles);
+            console.log('Images uploaded successfully:', imageUrls);
+          } catch (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            alert('Failed to upload images: ' + uploadError.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+          }
+        }
+
+        // Prepare data
+        const deviceData = {
+          name: deviceName,
+          type: deviceType,
+          price: price,
+          description: description,
+          imageUrl: imageUrls.length > 0 ? JSON.stringify(imageUrls) : ''
+        };
+
+        submitBtn.textContent = 'Saving...';
         console.log('Sending device data:', deviceData);
-        console.log('Using token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN');
 
         // Call API
         const response = await fetch('http://localhost:3001/api/devices', {
@@ -541,6 +798,7 @@
         if (response.ok && result.success) {
           closeModal();
           form.reset();
+          document.getElementById('imagePreview').innerHTML = '';
           // Redirect to same page with success message
           window.location.href = '/rentout.html?added=success&deviceNo=' + result.data.deviceNo;
         } else {
@@ -573,30 +831,91 @@
     const reviewList = document.getElementById('reviewList');
     const reviewTitle = document.getElementById('reviewTitle');
 
+    let currentReviewDeviceId = null;
+
     function showHistoryView(){
       reviewHistoryView.classList.remove('hidden');
       reviewWriteView.classList.add('hidden');
-      reviewTitle.textContent = 'Review History';
+      reviewTitle.textContent = 'Device Reviews';
     }
 
     function showWriteView(){
       reviewHistoryView.classList.add('hidden');
       reviewWriteView.classList.remove('hidden');
-      reviewTitle.textContent = 'Review lessee';
+      reviewTitle.textContent = 'Write Review';
       setTimeout(()=>{ reviewText.focus(); }, 50);
     }
 
-    function openReviewModal(lessee){
-      // set lessee names in both views
-      reviewLesseeName.textContent = lessee;
-      writeLesseeName.textContent = lessee;
+    // Fetch reviews from DB and render them
+    async function loadDeviceReviews(deviceId) {
+      reviewList.innerHTML = '<p style="text-align:center;color:#666;padding:16px;">Loading reviews...</p>';
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${deviceId}/reviews`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load reviews');
+
+        const { reviews, totalReviews, averageRating } = result.data;
+
+        // Update header with average
+        const headerEl = reviewList.closest('.review-body').querySelector('.review-lessee-name');
+        if (headerEl) headerEl.textContent = `${reviewLesseeName.textContent}`;
+        const starsHeaderEl = reviewList.closest('.review-body').querySelector('.review-stars.small');
+        if (starsHeaderEl) {
+          const avgRounded = Math.round(averageRating);
+          starsHeaderEl.innerHTML = '';
+          for (let i = 1; i <= 5; i++) {
+            const s = document.createElement('span');
+            s.textContent = '★';
+            s.style.color = i <= avgRounded ? '#FFC000' : '#ddd';
+            starsHeaderEl.appendChild(s);
+          }
+          starsHeaderEl.insertAdjacentHTML('beforeend', ` <small style="color:#666;font-size:13px;">${totalReviews} review${totalReviews !== 1 ? 's' : ''} · avg ${averageRating.toFixed(1)}</small>`);
+        }
+
+        if (!reviews || reviews.length === 0) {
+          reviewList.innerHTML = '<p style="text-align:center;color:#999;padding:16px;">No reviews yet. Be the first to review!</p>';
+          return;
+        }
+
+        reviewList.innerHTML = reviews.map(rv => {
+          const stars = '★'.repeat(rv.rating) + '☆'.repeat(5 - rv.rating);
+          const date = new Date(rv.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const initials = rv.reviewerEmail ? rv.reviewerEmail.charAt(0).toUpperCase() : '?';
+          const maskedEmail = rv.reviewerEmail ? rv.reviewerEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : 'Anonymous';
+          return `
+            <div class="review-entry">
+              <div class="entry-avatar" style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;background:#4a90e2;">${escapeHtml(initials)}</div>
+              <div class="entry-body">
+                <div class="entry-head">
+                  <strong>${escapeHtml(maskedEmail)}</strong>
+                  <span class="entry-time">${date}</span>
+                </div>
+                <div class="entry-stars" style="color:#FFC000;">${stars}</div>
+                <div class="entry-text">${rv.description ? escapeHtml(rv.description) : '<em style="color:#999">No description</em>'}</div>
+              </div>
+            </div>`;
+        }).join('');
+
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        reviewList.innerHTML = `<p style="text-align:center;color:#d32f2f;padding:16px;">Could not load reviews: ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openReviewModal(deviceId, deviceName){
+      currentReviewDeviceId = deviceId;
+      reviewLesseeName.textContent = deviceName || 'Device';
+      writeLesseeName.textContent = deviceName || 'Device';
       showHistoryView();
+      // Load reviews from DB
+      if (deviceId) loadDeviceReviews(deviceId);
       reviewOverlay.classList.add('open');
       reviewOverlay.setAttribute('aria-hidden','false');
       document.body.style.overflow = 'hidden';
     }
 
     function closeReviewModal(){
+      currentReviewDeviceId = null;
       reviewOverlay.classList.remove('open');
       reviewOverlay.setAttribute('aria-hidden','true');
       document.body.style.overflow = '';
@@ -605,13 +924,16 @@
       showHistoryView();
     }
 
-    // click handler for review buttons: open for ANY status now
+    // click handler for review buttons: pass deviceId and device name
     document.addEventListener('click', (e)=>{
       const btn = e.target.closest('.btn-review');
       if(!btn) return;
       const card = btn.closest('.rentout-card');
-      const lessee = card && (card.dataset.lessee || card.querySelector('.lessee-name')?.textContent);
-      openReviewModal(lessee || 'Lessee');
+      if (!card) return;
+      // Support both data-id (on card) and data-device-id (on button)
+      const deviceId = card.dataset.id || btn.dataset.deviceId;
+      const deviceName = card.querySelector('.device-name')?.textContent || card.dataset.name || 'Device';
+      openReviewModal(deviceId, deviceName);
     });
 
     closeReview && closeReview.addEventListener('click', closeReviewModal);
@@ -636,45 +958,56 @@
       showHistoryView();
     });
 
-    // submit review: append to history as a new entry (client-side demo)
-    submitReview && submitReview.addEventListener('click', ()=>{
+    // submit review: POST to DB
+    submitReview && submitReview.addEventListener('click', async ()=>{
       const stars = reviewStars.querySelectorAll('.star.active').length;
       const text = reviewText.value.trim();
-      console.log('Review submit', {stars, text});
-      // append to review list visually
-      const entry = document.createElement('div');
-      entry.className = 'review-entry';
-      entry.innerHTML = `
-        <div class="entry-avatar"></div>
-        <div class="entry-body">
-          <div class="entry-head"><strong>You</strong> <span class="entry-time">Just now</span></div>
-          <div class="entry-stars">${'★ '.repeat(Math.max(0,stars)).trim()}</div>
-          <div class="entry-text">${text ? escapeHtml(text) : ''}</div>
-          <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">0</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
-        </div>`;
-      reviewList.insertBefore(entry, reviewList.firstChild);
-      // wire thumbs for the newly added entry (toggle behavior)
-      function entryKeyFor(e){ try{ const name = e.querySelector('.entry-head strong')?.textContent||'u'; const txt = e.querySelector('.entry-text')?.textContent||''; return 'rentout_review_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(x){ return 'rentout_'+Date.now(); } }
-      (function wireNew(e){ const likeBtn = e.querySelector('.thumb-like'); const dislikeBtn = e.querySelector('.thumb-dislike'); const likeCountEl = e.querySelector('.count-like'); const dislikeCountEl = e.querySelector('.count-dislike'); const key = entryKeyFor(e); const cur = localStorage.getItem(key); if(cur==='like') likeBtn && likeBtn.classList.add('active'); if(cur==='dislike') dislikeBtn && dislikeBtn.classList.add('active'); likeBtn && likeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); likeCountEl && (likeCountEl.textContent = String(parseInt(likeCountEl.textContent||'0',10)+1)); if(now==='dislike'){ dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); dislikeBtn && dislikeBtn.classList.remove('active'); } } }); dislikeBtn && dislikeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); dislikeCountEl && (dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1)); if(now==='like'){ likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); likeBtn && likeBtn.classList.remove('active'); } } }); })(entry);
-      // TODO: POST review to server
-      closeReviewModal();
-      alert('Thank you for your review!');
-    });
 
-    // wire like/dislike for existing static review entries in the modal (toggle behavior)
-    document.querySelectorAll('.review-entry').forEach((entry, i)=>{
-      try{
-        const likeBtn = entry.querySelector('.thumb-like');
-        const dislikeBtn = entry.querySelector('.thumb-dislike');
-        const likeCountEl = entry.querySelector('.count-like');
-        const dislikeCountEl = entry.querySelector('.count-dislike');
-        const key = (function(){ try{ const name = entry.querySelector('.entry-head strong')?.textContent||('r'+i); const txt = entry.querySelector('.entry-text')?.textContent||''; return 'rentout_review_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(e){ return 'rentout_static_'+i; } })();
-        const cur = localStorage.getItem(key);
-        if(cur==='like') likeBtn && likeBtn.classList.add('active');
-        if(cur==='dislike') dislikeBtn && dislikeBtn.classList.add('active');
-        likeBtn && likeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); likeCountEl && (likeCountEl.textContent = String(parseInt(likeCountEl.textContent||'0',10)+1)); if(now==='dislike'){ dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); dislikeBtn && dislikeBtn.classList.remove('active'); } } });
-        dislikeBtn && dislikeBtn.addEventListener('click', ()=>{ const now = localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); dislikeCountEl && (dislikeCountEl.textContent = String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1))); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); dislikeCountEl && (dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1)); if(now==='like'){ likeCountEl && (likeCountEl.textContent = String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1))); likeBtn && likeBtn.classList.remove('active'); } } });
-      }catch(e){ /* ignore wiring errors */ }
+      if (!stars) {
+        alert('Please select a star rating before submitting.');
+        return;
+      }
+      if (!currentReviewDeviceId) {
+        alert('No device selected for review.');
+        return;
+      }
+
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') token = getAuthToken();
+      if (!token) {
+        alert('Please login to submit a review.');
+        return;
+      }
+
+      submitReview.disabled = true;
+      submitReview.textContent = 'Saving...';
+
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${currentReviewDeviceId}/reviews`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ rating: stars, description: text })
+        });
+
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to save review');
+
+        // Reload reviews from DB
+        showHistoryView();
+        await loadDeviceReviews(currentReviewDeviceId);
+        reviewText.value = '';
+        Array.from(reviewStars.querySelectorAll('.star')).forEach(s => s.classList.remove('active'));
+        alert('✅ Thank you for your review!');
+      } catch (err) {
+        console.error('Error submitting review:', err);
+        alert('Error: ' + err.message);
+      } finally {
+        submitReview.disabled = false;
+        submitReview.textContent = 'Confirm';
+      }
     });
 
     // Confirm modal logic for requested items
@@ -729,6 +1062,29 @@
       if(cbtn) cbtn.remove();
       closeConfirmModal();
       alert('Request confirmed. Status updated to Rented.');
+    });
+
+    // Device card click to view details
+    document.addEventListener('click', (e)=>{
+      // Check if clicking on a card but not on buttons or interactive elements
+      const card = e.target.closest('.rentout-card');
+      if (!card) return;
+      
+      // Don't navigate if clicking on buttons or interactive elements
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.btn') ||
+          e.target.closest('select') || e.target.closest('input') || e.target.closest('label')) {
+        return;
+      }
+      
+      // Get device info
+      const deviceId = card.dataset.id;
+      const deviceName = card.querySelector('.device-name')?.textContent || 'Device';
+      
+      // Navigate to device detail page
+      if (deviceId) {
+        const url = '/searchdevice?id=' + encodeURIComponent(deviceId) + '&name=' + encodeURIComponent(deviceName);
+        window.location.href = url;
+      }
     });
   </script>
  </body>

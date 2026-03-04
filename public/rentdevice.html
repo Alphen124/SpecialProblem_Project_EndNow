@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Notelet — Rent Device</title>
+  <title>Notelet â€” Rent Device</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
   <script src="/auth.js"></script>
@@ -54,6 +54,40 @@
     .mini-meta { font-size:12px; color:#666 }
     .mini-cart-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px }
     .mini-cart.hidden{ display:none }
+    /* ── Lightbox ────────────────────────────────────────────── */
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.93); z-index:9999; align-items:center; justify-content:center; }
+    .lightbox.open { display:flex; }
+    .lightbox-img { max-width:88vw; max-height:88vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 40px rgba(0,0,0,.5); user-select:none; pointer-events:none; }
+    .lightbox-close { position:absolute; top:18px; right:24px; background:rgba(255,255,255,.12); border:none; color:#fff; font-size:22px; cursor:pointer; border-radius:50%; width:42px; height:42px; display:flex; align-items:center; justify-content:center; transition:background .2s; line-height:1; }
+    .lightbox-close:hover { background:rgba(255,255,255,.28); }
+    .lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.12); border:none; color:#fff; font-size:32px; width:52px; height:52px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:50%; transition:background .2s; }
+    .lightbox-nav:hover { background:rgba(255,255,255,.28); }
+    .lightbox-prev { left:20px; } .lightbox-next { right:20px; }
+    .lightbox-counter { color:rgba(255,255,255,.6); position:absolute; bottom:20px; font-size:13px; }
+    /* ── Booking Card ────────────────────────────────────────── */
+    .booking-card { background:#f8faff; border:1.5px solid #dde8ff; border-radius:16px; padding:22px 24px; margin-top:20px; }
+    .booking-title { font-size:16px; font-weight:700; color:#1a1a2e; margin-bottom:18px; }
+    .booking-dates { display:grid; grid-template-columns:1fr 28px 1fr; align-items:end; gap:8px; margin-bottom:14px; }
+    .booking-dates-arrow { text-align:center; color:#bbb; font-size:18px; padding-bottom:10px; }
+    .booking-field { display:flex; flex-direction:column; gap:5px; }
+    .booking-field label { font-size:11px; font-weight:700; color:#7b8ab8; text-transform:uppercase; letter-spacing:.5px; }
+    .booking-field input[type="date"], .booking-field select { width:100%; padding:9px 12px; border:1.5px solid #dde4f5; border-radius:10px; font-size:14px; background:#fff; outline:none; box-sizing:border-box; transition:border-color .2s,box-shadow .2s; font-family:inherit; color:#1a1a2e; }
+    .booking-field input[type="date"]:focus, .booking-field select:focus { border-color:#4a90e2; box-shadow:0 0 0 3px rgba(74,144,226,.1); }
+    .booking-times { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+    .booking-summary { background:#fff; border-radius:10px; padding:12px 16px; margin-bottom:18px; border:1px solid #edf0fa; }
+    .booking-summary.hidden { display:none; }
+    .b-sum-row { display:flex; justify-content:space-between; font-size:13px; color:#666; padding:4px 0; }
+    .b-sum-row.total { font-size:15px; font-weight:700; color:#1a1a2e; border-top:1px solid #eee; margin-top:6px; padding-top:10px; }
+    .booking-actions { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .btn-book { flex:1; padding:13px 18px; background:#1a1a2e; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:background .2s,transform .1s; letter-spacing:.2px; }
+    .btn-book:hover { background:#16213e; }
+    .btn-book:active { transform:scale(.98); }
+    .booking-meta-row { text-align:center; font-size:13px; color:#aaa; margin-top:4px; }
+    .device-gallery { cursor:zoom-in; }
+    .thumb { cursor:zoom-in; }
+    /* ── Empty-state helpers ────────────────────────────────── */
+    .empty-state { text-align:center; padding:24px 0; color:#aaa; font-size:14px; }
+    .empty-state .empty-icon { font-size:32px; margin-bottom:8px; }
   </style>
 </head>
 <body>
@@ -96,7 +130,7 @@
             <p id="details">Description, specification, pick up and return location. <span style="color:#D00">*Fine if return late*</span></p>
 
             <h3 style="margin-top:18px;">Reviews</h3>
-            <div class="meta-small">Average rating <strong>4</strong> — 42 reviews</div>
+            <div class="meta-small">Average rating <strong>4</strong>  42 reviews</div>
             <div id="reviewList" class="review-list" aria-live="polite"></div>
           </div>
         </div>
@@ -105,27 +139,49 @@
         <div class="device-info">
           <div class="meta-small" id="brandName">Brand Name</div>
           <h1 id="deviceName">Device Name</h1>
-          <div class="meta-small" id="reviews">★★★★★ 42 reviews</div>
+          <div class="meta-small" id="reviews"></div>
           <div class="price" id="devicePrice">10.00 Baht/day</div>
 
-          <div class="date-buttons" id="dateButtons"></div>
+          <!-- ── Booking Card ─────────────────────────────────────── -->
+          <div class="booking-card" id="bookingCard">
+            <div class="booking-title">&#x1F4CB; Book This Device</div>
 
-          <div class="time-row">
-            <div>
-              <label for="pickup">Pick up time</label><br>
-              <select id="pickup"></select>
+            <div class="booking-dates">
+              <div class="booking-field">
+                <label for="startDate">Start Date</label>
+                <input type="date" id="startDate">
+              </div>
+              <div class="booking-dates-arrow">&#x2192;</div>
+              <div class="booking-field">
+                <label for="endDate">End Date</label>
+                <input type="date" id="endDate">
+              </div>
             </div>
-            <div>
-              <label for="returnt">Return time</label><br>
-              <select id="returnt"></select>
-            </div>
-          </div>
 
-          <div style="margin-top:18px;display:flex;align-items:center;gap:12px;justify-content:flex-start;">
-            <a id="addCartBtn" class="add-cart" href="#">Add to cart</a>
-            <button id="favoriteBtn" class="favorite" aria-pressed="false" title="Add to favorites">♡</button>
-            <span style="display:inline-block;width:18px"></span>
-            <span id="remaining" class="meta-small">Remaining 1</span>
+            <div class="booking-times">
+              <div class="booking-field">
+                <label for="pickup">Pick-up Time</label>
+                <select id="pickup"></select>
+              </div>
+              <div class="booking-field">
+                <label for="returnt">Return Time</label>
+                <select id="returnt"></select>
+              </div>
+            </div>
+
+            <div class="booking-summary hidden" id="bookingSummary">
+              <div class="b-sum-row"><span>Duration</span><span id="summaryDays">&#x2014;</span></div>
+              <div class="b-sum-row"><span>Price / day</span><span id="summaryPpd">&#x2014;</span></div>
+              <div class="b-sum-row total"><span>Total</span><span id="summaryTotal">&#x2014;</span></div>
+            </div>
+
+            <div class="booking-actions">
+              <button id="addCartBtn" class="btn-book">&#x1F6D2; Add to Cart</button>
+              <button id="favoriteBtn" class="favorite" aria-pressed="false" title="Add to favorites">&#x2661;</button>
+            </div>
+            <div class="booking-meta-row">
+              <span id="remaining" class="meta-small">Loading&#x2026;</span>
+            </div>
           </div>
 
           <!-- Rating summary positioned to the right/bottom area -->
@@ -137,10 +193,19 @@
     </section>
   </main>
 
+  <!-- ── Lightbox ──────────────────────────────────────────────────── -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button id="lightboxClose" class="lightbox-close" aria-label="Close">&#x00D7;</button>
+    <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Previous">&#x2039;</button>
+    <img id="lightboxImg" class="lightbox-img" src="" alt="Full size image">
+    <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Next">&#x203A;</button>
+    <div id="lightboxCounter" class="lightbox-counter"></div>
+  </div>
+
   <!-- Mini cart popup -->
   <div id="miniCartPopup" class="mini-cart hidden" aria-hidden="true">
     <div class="mini-cart-inner">
-      <button id="miniCartClose" class="mini-cart-close" aria-label="Close">×</button>
+      <button id="miniCartClose" class="mini-cart-close" aria-label="Close">Ã—</button>
       <div id="miniCartItems"></div>
       <div class="mini-cart-footer">
         <div id="miniCartTotal" class="mini-cart-total"></div>
@@ -152,7 +217,7 @@
   <!-- Mini favorites popup (behaves like mini cart) -->
   <div id="miniFavPopup" class="mini-cart hidden" aria-hidden="true">
     <div class="mini-cart-inner">
-      <button id="miniFavClose" class="mini-cart-close" aria-label="Close">×</button>
+      <button id="miniFavClose" class="mini-cart-close" aria-label="Close">Ã—</button>
       <div id="miniFavItems"></div>
       <div class="mini-cart-footer">
         <div id="miniFavCount" class="mini-cart-total"></div>
@@ -166,7 +231,7 @@
     <div class="mini-cart-inner" style="width:360px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <strong>Confirm checkout</strong>
-        <button id="confirmClose" class="mini-cart-close" aria-label="Close">×</button>
+        <button id="confirmClose" class="mini-cart-close" aria-label="Close">Ã—</button>
       </div>
       <div style="margin-top:12px;">Are you sure you want to checkout these items?</div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
@@ -184,21 +249,16 @@
   </script>
   <script src="/navpopups.js"></script>
   <script>
-    // read query params
-    function getQueryParam(name){
-      const url = new URL(window.location.href);
-      return url.searchParams.get(name);
-    }
+    function getQueryParam(name){ return new URL(window.location.href).searchParams.get(name); }
     function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    const id = getQueryParam('id');
-    const name = getQueryParam('name') || 'Device Name';
 
-    document.getElementById('deviceName').textContent = decodeURIComponent(name);
-    document.getElementById('devicePrice').textContent = '10.00 Baht/day';
-    document.getElementById('brandName').textContent = 'Brand Name';
-    document.getElementById('details').textContent = 'Description and specification for ' + decodeURIComponent(name) + '. Location to pick up and return.';
+    const id   = getQueryParam('id');
+    const nameParam = getQueryParam('name') || 'Device Name';
 
-    // header search toggle (show input in navbar)
+    // Set a placeholder title immediately while loading
+    document.getElementById('deviceName').textContent = decodeURIComponent(nameParam);
+    document.title = 'Notelet â€” ' + decodeURIComponent(nameParam);
+
     (function(){
       const navSearchBtn = document.getElementById('navSearchBtn');
       const headerSearch = document.getElementById('headerSearch');
@@ -211,367 +271,362 @@
       headerSearchSubmit && headerSearchSubmit.addEventListener('click', (e)=>{ e.preventDefault(); const q = headerSearchInput && headerSearchInput.value; if(q) { window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q); } hideSearch(); });
     })();
 
-    // populate sample date buttons and make them selectable (single-select)
-    const dateButtons = document.getElementById('dateButtons');
-    const sampleDates = ['8 ต.ค.','9 ต.ค.','10 ต.ค.','11 ต.ค.'];
-    // allow selecting up to 2 date buttons (maintain selection order)
-    const selectedDateButtons = [];
-    sampleDates.forEach(d=>{
-      const b = document.createElement('button'); b.type = 'button'; b.textContent = d; b.className = 'date-btn';
-      b.addEventListener('click', ()=>{
-        if(b.classList.contains('selected')){
-          b.classList.remove('selected');
-          const idx = selectedDateButtons.indexOf(b); if(idx !== -1) selectedDateButtons.splice(idx,1);
+    async function loadDevice() {
+      if (!id) return;
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${id}`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load device');
+        const d = result.data;
+
+        // Name & title
+        document.getElementById('deviceName').textContent = d.name || decodeURIComponent(nameParam);
+        document.title = 'Notelet â€” ' + (d.name || decodeURIComponent(nameParam));
+
+        // Brand / type
+        document.getElementById('brandName').textContent = d.type || 'Device';
+
+        // Price
+        document.getElementById('devicePrice').textContent =
+          d.price != null ? parseFloat(d.price).toFixed(2) + ' Baht/day' : 'â€”';
+
+        // Description
+        const detailsEl = document.getElementById('details');
+        if (d.description && d.description.trim()) {
+          detailsEl.textContent = d.description;
         } else {
-          if(selectedDateButtons.length >= 2){
-            const first = selectedDateButtons.shift(); first.classList.remove('selected');
-          }
-          selectedDateButtons.push(b);
-          b.classList.add('selected');
+          detailsEl.innerHTML = '<em style="color:#bbb;">ไม่มีคำอธิบายสำหรับอุปกรณ์นี้</em>';
         }
-      });
-      dateButtons.appendChild(b);
-    });
 
-    // parse remaining count shown on page (per-device)
+        // Remaining count from API (if available)
+        window._remainingCount = d.remaining != null ? d.remaining : 1;
+        remainingCount = window._remainingCount;
+        document.getElementById('remaining').textContent = `${remainingCount} เครื่องว่าง`;
+        // Update booking summary price if already calculated
+        updateBookingSummary();
+
+        // Images
+        let imageUrls = [];
+        if (d.imageUrl) {
+          try { imageUrls = JSON.parse(d.imageUrl); if (!Array.isArray(imageUrls)) imageUrls = [d.imageUrl]; }
+          catch { imageUrls = [d.imageUrl]; }
+        }
+        const mainImg = document.getElementById('mainImage');
+        const thumbsWrap = document.querySelector('.device-thumbs');
+        window._allImageUrls = imageUrls;
+        window._lightboxCurrentIdx = 0;
+        if (imageUrls.length > 0) {
+          mainImg.style.backgroundImage = `url('${imageUrls[0]}')`;
+          mainImg.style.backgroundSize = 'cover';
+          mainImg.style.backgroundPosition = 'center';
+          // Click main image → open lightbox
+          mainImg.onclick = () => openLightbox(window._allImageUrls || [], window._lightboxCurrentIdx || 0);
+          // Thumbnails
+          thumbsWrap.innerHTML = '';
+          imageUrls.forEach((url, i) => {
+            const t = document.createElement('div');
+            t.className = 'thumb';
+            t.style.backgroundImage = `url('${url}')`;
+            t.style.backgroundSize = 'cover';
+            t.style.backgroundPosition = 'center';
+            t.addEventListener('click', () => {
+              mainImg.style.backgroundImage = `url('${url}')`;
+              thumbsWrap.querySelectorAll('.thumb').forEach(x => x.style.outline = '');
+              t.style.outline = '2px solid #000';
+              window._lightboxCurrentIdx = i;
+            });
+            if (i === 0) t.style.outline = '2px solid #000';
+            thumbsWrap.appendChild(t);
+          });
+        } else {
+          mainImg.style.background = '#e8ecf0';
+          mainImg.title = 'No images available';
+          thumbsWrap.innerHTML = '<p class="empty-state" style="font-size:13px;color:#bbb;">No images</p>';
+        }
+
+        // Store price per day for cart calculation
+        window._pricePerDay = parseFloat(d.price) || 0;
+
+      } catch (err) {
+        console.error('Error loading device:', err);
+        document.getElementById('details').innerHTML = '<em style="color:#d32f2f;">ไม่สามารถโหลดข้อมูลอุปกรณ์ได้</em>';
+        document.getElementById('remaining').textContent = 'ไม่มีข้อมูล';
+      }
+    }
+
+    // called when no id in URL
+    function showNoDeviceState() {
+      document.getElementById('rentWrap').innerHTML = `
+        <div class="empty-state" style="padding:80px 20px;width:100%;">
+          <div class="empty-icon">&#x1F4F1;</div>
+          <div style="font-size:18px;font-weight:600;color:#333;">ไม่พบอุปกรณ์</div>
+          <div style="margin-top:8px;">ไม่มีข้อมูลอุปกรณ์สำหรับหน้านี้</div>
+          <a href="/" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1a1a2e;color:#fff;border-radius:10px;text-decoration:none;">กลับหน้าหลัก</a>
+        </div>`;
+    }
+
+    async function loadReviews() {
+      if (!id) return;
+      const reviewListEl = document.getElementById('reviewList');
+      const ratingSummaryEl = document.getElementById('ratingSummary');
+      const reviewsMetaEl = document.getElementById('reviews');
+      const reviewsHeaderEl = document.querySelector('.details-left h3 + .meta-small, .details-left .review-meta');
+
+      reviewListEl.innerHTML = '<p style="color:#999;padding:8px 0;">Loading reviewsâ€¦</p>';
+      ratingSummaryEl.innerHTML = '';
+
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${id}/reviews`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load reviews');
+
+        const { reviews, totalReviews, averageRating } = result.data;
+
+        const ratingCounts = {5:0, 4:0, 3:0, 2:0, 1:0};
+        (reviews || []).forEach(rv => { if (rv.rating >= 1 && rv.rating <= 5) ratingCounts[rv.rating]++; });
+        const totalCount = totalReviews || 0;
+        const avgRounded = Math.round(averageRating || 0);
+        const stars = 'â˜…'.repeat(avgRounded) + 'â˜†'.repeat(5 - avgRounded);
+
+        // Update right column header meta
+        if (reviewsMetaEl) reviewsMetaEl.innerHTML =
+          `<span style="color:#FFC000;">${stars}</span> ${totalCount} review${totalCount !== 1 ? 's' : ''}`;
+
+        // Average box
+        ratingSummaryEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:8px;">
+            <div style="font-size:28px;font-weight:700;">${(averageRating||0).toFixed(1)}</div>
+            <div style="color:#FFC000;font-size:22px;">${stars}</div>
+            <div class="meta-small">${totalCount} reviews</div>
+          </div>`;
+        [5,4,3,2,1].forEach(star => {
+          const row = document.createElement('div'); row.className = 'rating-row';
+          const fillPct = totalCount > 0 ? Math.round((ratingCounts[star]||0)/totalCount*100) : 0;
+          row.innerHTML = `<div class="label">${star}</div><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div><div class="count">${ratingCounts[star]||0}</div>`;
+          ratingSummaryEl.appendChild(row);
+        });
+
+        const reviewsSection = reviewListEl.previousElementSibling;
+        if (reviewsSection && reviewsSection.tagName === 'DIV') {
+          reviewsSection.innerHTML = `Average rating <strong>${(averageRating||0).toFixed(1)}</strong> â€” ${totalCount} review${totalCount !== 1 ? 's' : ''}`;
+        }
+
+        if (!reviews || reviews.length === 0) {
+          reviewListEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">&#x1F4AC;</div>
+              <div>ยังไม่มีรีวิว</div>
+              <div style="font-size:12px;margin-top:4px;">เป็นคนแรกที่รีวิวอุปกรณ์นี้!</div>
+            </div>`;
+          // Also show empty state in rating summary
+          ratingSummaryEl.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x2B50;</div><div>ยังไม่มีคะแนน</div></div>';
+          return;
+        }
+
+        reviewListEl.innerHTML = '';
+        reviews.forEach((rv, i) => {
+          const starStr = 'â˜…'.repeat(rv.rating) + 'â˜†'.repeat(5 - rv.rating);
+          const date = new Date(rv.createdAt).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' });
+          const initial = rv.reviewerEmail ? rv.reviewerEmail.charAt(0).toUpperCase() : '?';
+          const masked = rv.reviewerEmail ? rv.reviewerEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : 'Anonymous';
+
+          const item = document.createElement('div'); item.className = 'review-item';
+          item.innerHTML = `
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div class="avatar-small" aria-hidden style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;background:#4a90e2;">${escapeHtml(initial)}</div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;"><strong>${escapeHtml(masked)}</strong><span class="meta-small">${escapeHtml(date)}</span></div>
+                <div class="review-stars" style="color:#FFC000;">${starStr}</div>
+              </div>
+            </div>
+            <p class="review-text">${rv.description ? escapeHtml(rv.description) : '<em style="color:#aaa">No description</em>'}</p>
+            <div class="review-actions">
+              <button class="like">ðŸ‘ <span class="count-like">0</span></button>
+              <button class="dislike">ðŸ‘Ž <span class="count-dislike">0</span></button>
+            </div>`;
+          reviewListEl.appendChild(item);
+          setupReviewToggle(item, i);
+        });
+
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        reviewListEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">&#x26A0;&#xFE0F;</div>
+            <div>ไม่สามารถโหลดรีวิวได้</div>
+            <div style="font-size:12px;margin-top:4px;color:#d32f2f;">${escapeHtml(err.message)}</div>
+          </div>`;
+        ratingSummaryEl.innerHTML = '<div class="empty-state"><div>—</div></div>';
+      }
+    }
+
+    // ─── Booking date range + time selects ────────────────────────────────────
     let remainingCount = 1;
-    try{ const remTxt = document.getElementById('remaining').textContent.match(/\d+/); if(remTxt) remainingCount = parseInt(remTxt[0],10); }catch(e){}
+    const today = new Date().toISOString().split('T')[0];
+    const startDateEl = document.getElementById('startDate');
+    const endDateEl   = document.getElementById('endDate');
+    startDateEl.min = today;
+    endDateEl.min   = today;
 
-    // populate time options from 06:00 to 18:00 (hourly)
-    function populateTimes(sel){
-      for(let h=6; h<=18; h++){
-        const hh = String(h).padStart(2,'0')+':00';
-        const opt = document.createElement('option'); opt.value = hh; opt.textContent = hh; sel.appendChild(opt);
+    function updateBookingSummary() {
+      const s = startDateEl.value;
+      const e = endDateEl.value;
+      const summaryEl = document.getElementById('bookingSummary');
+      if (s && e && e >= s) {
+        const days = Math.ceil((new Date(e) - new Date(s)) / 864e5) + 1;
+        const price = window._pricePerDay || 0;
+        document.getElementById('summaryDays').textContent = days + ' วัน';
+        document.getElementById('summaryPpd').textContent  = price ? price.toFixed(2) + ' บาท/วัน' : '—';
+        document.getElementById('summaryTotal').textContent= price ? (days * price).toFixed(2) + ' บาท' : '—';
+        summaryEl.classList.remove('hidden');
+      } else {
+        summaryEl.classList.add('hidden');
+      }
+    }
+
+    startDateEl.addEventListener('change', () => {
+      if (endDateEl.value && endDateEl.value < startDateEl.value) endDateEl.value = startDateEl.value;
+      endDateEl.min = startDateEl.value || today;
+      updateBookingSummary();
+    });
+    endDateEl.addEventListener('change', updateBookingSummary);
+
+    function populateTimes(sel) {
+      for (let h = 6; h <= 22; h++) {
+        const hh = String(h).padStart(2,'0') + ':00';
+        const opt = document.createElement('option'); opt.value = hh; opt.textContent = hh;
+        sel.appendChild(opt);
       }
     }
     populateTimes(document.getElementById('pickup'));
     populateTimes(document.getElementById('returnt'));
 
-    // CART: localStorage-backed cart and mini popup
-    const CART_KEY = 'notelet_cart_v1';
-    const HISTORY_KEY = 'notelet_history_v1';
-    function getCart(){ try{ return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }catch(e){ return []; } }
-    function saveCart(cart){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
-    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; } }
-    function saveHistory(history){ localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
-    function addCartToHistory(items){
-      const history = getHistory();
-      const now = new Date().toISOString();
-      (items || []).forEach((it)=>{
-        const source = it?.source || 'rent';
-        history.push({
-          ...it,
-          source,
-          status: it?.status || 'Completed',
-          location: it?.location || 'Pick up or return Location',
-          lessor: it?.lessor || (source === 'borrow' ? 'ComSci, KMITL' : 'Lessor Name'),
-          completedAt: now,
-        });
-      });
-      saveHistory(history);
-    }
+    const CART_KEY='notelet_cart_v1'; const HISTORY_KEY='notelet_history_v1';
+    function getCart(){ try{ return JSON.parse(localStorage.getItem(CART_KEY)||'[]'); }catch(e){ return []; } }
+    function saveCart(cart){ localStorage.setItem(CART_KEY,JSON.stringify(cart)); }
+    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; } }
+    function saveHistory(h){ localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); }
+    function addCartToHistory(items){ const history=getHistory(); const now=new Date().toISOString(); (items||[]).forEach(it=>{ const source=it?.source||'rent'; history.push({...it,source,status:it?.status||'Completed',location:it?.location||'Pick up or return Location',lessor:it?.lessor||(source==='borrow'?'ComSci, KMITL':'Lessor Name'),completedAt:now}); }); saveHistory(history); }
+
     function renderMiniCart(){
-      const popup = document.getElementById('miniCartPopup');
-      const itemsWrap = document.getElementById('miniCartItems');
-      const totalEl = document.getElementById('miniCartTotal');
-      const cart = getCart();
-      itemsWrap.innerHTML = '';
-      let total = 0;
-      let hasPriced = false;
-      if(cart.length === 0){ itemsWrap.innerHTML = '<div class="mini-empty">Cart is empty</div>'; }
-      cart.forEach((it, idx)=>{
-        const row = document.createElement('div'); row.className='mini-item';
-        // show total price for that line (days * pricePerDay)
-        const isBorrow = (it && (it.source === 'borrow')) || (!it?.source && (it?.price === '' || it?.price == null) && (typeof it?.total === 'number') && it.total === 0);
-        const priceDisplay = (!isBorrow && typeof it.total === 'number') ? (it.total.toFixed(2) + ' Baht') : (!isBorrow ? escapeHtml(it.price||'') : '');
-        // build start/finish display: "startDate startTime - finishDate finishTime" or if one date: "date startTime - finishTime"
-        let metaText = '';
-        try{
-          const dates = (it.date || '').split(' - ').map(s=>s.trim()).filter(Boolean);
-          if(dates.length === 1){ metaText = `${dates[0]} ${it.pickup || ''} - ${it.returnt || ''}`; }
-          else if(dates.length >= 2){ metaText = `${dates[0]} ${it.pickup || ''} - ${dates[1]} ${it.returnt || ''}`; }
-          else { metaText = `${it.pickup || ''} - ${it.returnt || ''}`; }
-        }catch(e){ metaText = `${escapeHtml(it.date || '')} ${escapeHtml(it.pickup||'')}`; }
-        const priceHtml = priceDisplay ? (priceDisplay + ' ') : '';
-        row.innerHTML = `<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(metaText)}</div></div><div class="mini-item-right">${priceHtml}<button class="mini-delete" data-idx="${idx}" aria-label="Delete">Delete</button></div>`;
+      const popup=document.getElementById('miniCartPopup'); const itemsWrap=document.getElementById('miniCartItems'); const totalEl=document.getElementById('miniCartTotal'); const cart=getCart();
+      itemsWrap.innerHTML=''; let total=0; let hasPriced=false;
+      if(cart.length===0){ itemsWrap.innerHTML='<div class="mini-empty">Cart is empty</div>'; }
+      cart.forEach((it,idx)=>{
+        const row=document.createElement('div'); row.className='mini-item';
+        const isBorrow=(it&&(it.source==='borrow'));
+        const priceDisplay=(!isBorrow&&typeof it.total==='number')?(it.total.toFixed(2)+' Baht'):(!isBorrow?escapeHtml(it.price||''):'');
+        let metaText=''; try{ const dates=(it.date||'').split(' - ').map(s=>s.trim()).filter(Boolean); if(dates.length===1){metaText=`${dates[0]} ${it.pickup||''} - ${it.returnt||''}`;}else if(dates.length>=2){metaText=`${dates[0]} ${it.pickup||''} - ${dates[1]} ${it.returnt||''}`;}else{metaText=`${it.pickup||''} - ${it.returnt||''}`;} }catch(e){ metaText=`${escapeHtml(it.date||'')} ${escapeHtml(it.pickup||'')}`; }
+        const priceHtml=priceDisplay?(priceDisplay+' '):'';
+        row.innerHTML=`<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(metaText)}</div></div><div class="mini-item-right">${priceHtml}<button class="mini-delete" data-idx="${idx}" aria-label="Delete">Delete</button></div>`;
         itemsWrap.appendChild(row);
-        if(!isBorrow){
-          hasPriced = true;
-          total += (typeof it.total === 'number') ? it.total : (parseFloat(String(it.price||0).replace(/[^0-9\.]/g,'')) || 0);
-        }
+        if(!isBorrow){ hasPriced=true; total+=(typeof it.total==='number')?it.total:(parseFloat(String(it.price||0).replace(/[^0-9\.]/g,''))||0); }
       });
-      totalEl.textContent = (cart.length && hasPriced) ? ('Total '+total.toFixed(2)+' Baht') : '';
-      // attach delete handlers
-      itemsWrap.querySelectorAll('.mini-delete').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const i = parseInt(btn.getAttribute('data-idx'),10);
-          const c = getCart();
-          if(!isNaN(i) && i >= 0 && i < c.length){
-            // if deleting an item for current device, restore remainingCount
-            const removed = c.splice(i,1)[0];
-            saveCart(c);
-            // if removed item is same device as current page, increment remaining
-            try{ if(removed && String(removed.id) === String(id)){ remainingCount = Math.min(remainingCount+1, 9999); document.getElementById('remaining').textContent = 'Remaining '+remainingCount; } }catch(e){}
-            // re-read cart and re-render, then hide popup when cart empty
-            const newCart = getCart();
-            renderMiniCart();
-            if(Array.isArray(newCart) && newCart.length === 0){
-              // ensure popup is hidden
-              showMiniCartAtAnchor(false);
-            }
-          }
-        });
-      });
+      totalEl.textContent=(cart.length&&hasPriced)?('Total '+total.toFixed(2)+' Baht'):'';
+      itemsWrap.querySelectorAll('.mini-delete').forEach(btn=>{ btn.addEventListener('click',()=>{ const i=parseInt(btn.getAttribute('data-idx'),10); const c=getCart(); if(!isNaN(i)&&i>=0&&i<c.length){ const removed=c.splice(i,1)[0]; saveCart(c); try{ if(removed&&String(removed.id)===String(id)){ remainingCount=Math.min(remainingCount+1,9999); document.getElementById('remaining').textContent='Remaining '+remainingCount; } }catch(e){} renderMiniCart(); const newCart=getCart(); if(Array.isArray(newCart)&&newCart.length===0) showMiniCartAtAnchor(false); } }); });
     }
+    function showMiniCartAtAnchor(show){ const popup=document.getElementById('miniCartPopup'); const anchor=document.getElementById('headerCartBtn'); if(!popup||!anchor) return; if(show){ renderMiniCart(); const rect=anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left=(rect.left)+'px'; popup.style.top=(rect.bottom+8+window.scrollY)+'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); } }
+    document.getElementById('miniCartClose').addEventListener('click',()=>showMiniCartAtAnchor(false));
+    document.addEventListener('click',(e)=>{ const popup=document.getElementById('miniCartPopup'); if(!popup.contains(e.target)&&e.target.id!=='headerCartBtn'&&!e.target.closest('#miniCartPopup')) showMiniCartAtAnchor(false); });
+    document.addEventListener('click',(e)=>{ const favPopup=document.getElementById('miniFavPopup'); if(favPopup&&!favPopup.contains(e.target)&&e.target.id!=='headerFavBtn'&&!e.target.closest('#miniFavPopup')) showMiniFavAtAnchor(false); });
+    document.getElementById('miniCartCheckout').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); if(!dlg) return; dlg.classList.remove('hidden'); dlg.setAttribute('aria-hidden','false'); });
+    document.getElementById('confirmClose').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
+    document.getElementById('confirmNo').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
+    document.getElementById('confirmYes').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); const cart=getCart(); addCartToHistory(cart); saveCart([]); renderMiniCart(); showMiniCartAtAnchor(false); alert('Checkout complete (demo)'); });
 
-    function showMiniCartAtAnchor(show){
-      const popup = document.getElementById('miniCartPopup');
-      const anchor = document.getElementById('headerCartBtn');
-      if(!popup || !anchor) return;
-      if(show){
-        renderMiniCart();
-        const rect = anchor.getBoundingClientRect();
-        popup.style.position = 'absolute';
-        popup.style.left = (rect.left)+'px';
-        popup.style.top = (rect.bottom + 8 + window.scrollY) + 'px';
-        popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false');
-      } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
-    }
+    const FAV_KEY='notelet_favs_v1';
+    function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)||'[]'); }catch(e){ return []; } }
+    function saveFavs(list){ localStorage.setItem(FAV_KEY,JSON.stringify(list)); }
+    function renderMiniFav(){ const popup=document.getElementById('miniFavPopup'); const itemsWrap=document.getElementById('miniFavItems'); const countEl=document.getElementById('miniFavCount'); const favs=getFavs(); itemsWrap.innerHTML=''; if(favs.length===0){itemsWrap.innerHTML='<div class="mini-empty">No favorites</div>';} favs.forEach((it,idx)=>{ const row=document.createElement('div'); row.className='mini-item'; row.innerHTML=`<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(it.detail||'')}</div></div><div class="mini-item-right"><button class="mini-fav-delete" data-idx="${idx}" aria-label="Remove">Remove</button></div>`; itemsWrap.appendChild(row); }); countEl.textContent=favs.length?(favs.length+' favorites'):''; itemsWrap.querySelectorAll('.mini-fav-delete').forEach(btn=>{ btn.addEventListener('click',()=>{ const i=parseInt(btn.getAttribute('data-idx'),10); const f=getFavs(); if(!isNaN(i)&&i>=0&&i<f.length){ f.splice(i,1); saveFavs(f); renderMiniFav(); if(f.length===0) showMiniFavAtAnchor(false); } }); }); }
+    function showMiniFavAtAnchor(show){ const popup=document.getElementById('miniFavPopup'); const anchor=document.getElementById('headerFavBtn'); if(!popup||!anchor) return; if(show){ renderMiniFav(); const rect=anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left=(rect.left)+'px'; popup.style.top=(rect.bottom+8+window.scrollY)+'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); } }
+    document.getElementById('miniFavClose').addEventListener('click',()=>showMiniFavAtAnchor(false));
+    function repositionPopups(){ try{ const cp=document.getElementById('miniCartPopup'); if(cp&&!cp.classList.contains('hidden')) showMiniCartAtAnchor(true); const fp=document.getElementById('miniFavPopup'); if(fp&&!fp.classList.contains('hidden')) showMiniFavAtAnchor(true); }catch(e){} }
+    window.addEventListener('scroll',repositionPopups); window.addEventListener('resize',repositionPopups);
+    document.getElementById('miniFavManage').addEventListener('click',()=>{ alert('Open favorites manager (demo)'); showMiniFavAtAnchor(false); });
 
-    document.getElementById('miniCartClose').addEventListener('click', ()=> showMiniCartAtAnchor(false));
-    document.addEventListener('click', (e)=>{ const popup = document.getElementById('miniCartPopup'); if(!popup.contains(e.target) && e.target.id !== 'headerCartBtn' && !e.target.closest('#miniCartPopup')) showMiniCartAtAnchor(false); });
-    // also close favorites popup when clicking outside
-    document.addEventListener('click', (e)=>{ const favPopup = document.getElementById('miniFavPopup'); if(favPopup && !favPopup.contains(e.target) && e.target.id !== 'headerFavBtn' && !e.target.closest('#miniFavPopup')) showMiniFavAtAnchor(false); });
-
-    // open confirm dialog on checkout
-    document.getElementById('miniCartCheckout').addEventListener('click', ()=>{
-      const dlg = document.getElementById('confirmDialog'); if(!dlg) return; dlg.classList.remove('hidden'); dlg.setAttribute('aria-hidden','false');
-    });
-    // confirm dialog handlers
-    document.getElementById('confirmClose').addEventListener('click', ()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
-    document.getElementById('confirmNo').addEventListener('click', ()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
-    document.getElementById('confirmYes').addEventListener('click', ()=>{
-      // perform checkout action (demo): clear cart, update UI
-      const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true');
-      const cart = getCart();
-      addCartToHistory(cart);
-      saveCart([]);
-      renderMiniCart();
-      showMiniCartAtAnchor(false);
-      alert('Checkout complete (demo)');
-    });
-
-    // FAVORITES: localStorage-backed favorites and mini popup
-    const FAV_KEY = 'notelet_favs_v1';
-    function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); }catch(e){ return []; } }
-    function saveFavs(list){ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }
-    function renderMiniFav(){
-      const popup = document.getElementById('miniFavPopup');
-      const itemsWrap = document.getElementById('miniFavItems');
-      const countEl = document.getElementById('miniFavCount');
-      const favs = getFavs();
-      itemsWrap.innerHTML = '';
-      if(favs.length === 0){ itemsWrap.innerHTML = '<div class="mini-empty">No favorites</div>'; }
-      favs.forEach((it, idx)=>{
-        const row = document.createElement('div'); row.className='mini-item';
-        row.innerHTML = `<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(it.detail||'')}</div></div><div class="mini-item-right"><button class="mini-fav-delete" data-idx="${idx}" aria-label="Remove">Remove</button></div>`;
-        itemsWrap.appendChild(row);
-      });
-      countEl.textContent = favs.length ? (favs.length+' favorites') : '';
-      itemsWrap.querySelectorAll('.mini-fav-delete').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-          const i = parseInt(btn.getAttribute('data-idx'),10);
-          const f = getFavs();
-          if(!isNaN(i) && i >=0 && i < f.length){ f.splice(i,1); saveFavs(f); renderMiniFav(); if(f.length===0) showMiniFavAtAnchor(false); }
-        });
-      });
-    }
-
-    function showMiniFavAtAnchor(show){
-      const popup = document.getElementById('miniFavPopup');
-      const anchor = document.getElementById('headerFavBtn');
-      if(!popup || !anchor) return;
-      if(show){ renderMiniFav(); const rect = anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left = (rect.left)+'px'; popup.style.top = (rect.bottom + 8 + window.scrollY) + 'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); }
-      else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); }
-    }
-
-    document.getElementById('miniFavClose').addEventListener('click', ()=> showMiniFavAtAnchor(false));
-    // reposition visible popups on scroll/resize so they follow the navbar
-    function repositionPopups(){
-      try{
-        const cartPopup = document.getElementById('miniCartPopup');
-        if(cartPopup && !cartPopup.classList.contains('hidden')) showMiniCartAtAnchor(true);
-        const favPopup = document.getElementById('miniFavPopup');
-        if(favPopup && !favPopup.classList.contains('hidden')) showMiniFavAtAnchor(true);
-      }catch(e){}
-    }
-    window.addEventListener('scroll', repositionPopups);
-    window.addEventListener('resize', repositionPopups);
-    document.getElementById('miniFavManage').addEventListener('click', ()=>{ alert('Open favorites manager (demo)'); showMiniFavAtAnchor(false); });
-
-    // wire add to cart (demo) -> add item to cart and show popup
-    document.getElementById('addCartBtn').addEventListener('click', (e)=>{
-      e.preventDefault();
-      // Use selection order tracked in selectedDateButtons so first is start and second is finish
-      const selectedDates = selectedDateButtons.map(b=>b.textContent);
-      const pickup = document.getElementById('pickup').value;
+    // ─── Add to cart ────────────────────────────────────────────────────────────
+    document.getElementById('addCartBtn').addEventListener('click', () => {
+      const start   = startDateEl.value;
+      const end     = endDateEl.value;
+      const pickup  = document.getElementById('pickup').value;
       const returnt = document.getElementById('returnt').value;
-      // validation: require at least one date and both times
-      if(selectedDates.length < 1){ alert('Please select at least one date (start date).'); return; }
-      if(!pickup || !returnt){ alert('Please select both pick up and return times.'); return; }
-      // compute days: if single date -> 1, if two dates -> inclusive range based on sampleDates order
-      let days = 1;
-      if(selectedDates.length >= 2){
-        const i1 = sampleDates.indexOf(selectedDates[0]);
-        const i2 = sampleDates.indexOf(selectedDates[1]);
-        if(i1 >=0 && i2 >=0){ days = Math.abs(i2 - i1) + 1; }
-      }
-      // parse price per day
-      const priceText = document.getElementById('devicePrice').textContent || '';
-      const pricePerDay = parseFloat(String(priceText).replace(/[^0-9\.]/g,'')) || 0;
-      const totalPrice = days * pricePerDay;
-      // check remaining stock for this device
+      if (!start)              { alert('กรุณาเลือกวันเริ่มต้น'); return; }
+      if (!end || end < start) { alert('กรุณาเลือกวันสิ้นสุดที่ถูกต้อง'); return; }
+      if (!pickup || !returnt) { alert('กรุณาเลือกเวลารับและคืน'); return; }
+      const days = Math.ceil((new Date(end) - new Date(start)) / 864e5) + 1;
+      const pricePerDay = window._pricePerDay || parseFloat(String(document.getElementById('devicePrice').textContent).replace(/[^0-9\.]/g,'')) || 0;
+      const totalPrice  = days * pricePerDay;
       const cart = getCart();
-      const sameDeviceCount = cart.filter(it=>String(it.id) === String(id)).length;
-      if(sameDeviceCount >= remainingCount){ alert('Cannot add more — not enough remaining devices.'); return; }
-      const item = { id: id || Date.now(), source: 'rent', name: decodeURIComponent(name), price: pricePerDay+' Baht/day', days, total: totalPrice, date: selectedDates.join(' - '), pickup, returnt, status: 'Requested', location: 'Pick up or return Location', lessor: 'Lessor Name' };
+      const sameCount = cart.filter(it => String(it.id) === String(id)).length;
+      if (sameCount >= remainingCount) { alert('ไม่สามารถเพิ่มได้ — จำนวนไม่เพียงพอ'); return; }
+      const item = {
+        id: id || Date.now(), source: 'rent',
+        name: document.getElementById('deviceName').textContent,
+        price: pricePerDay + ' Baht/day', days, total: totalPrice,
+        date: start + ' - ' + end, pickup, returnt,
+        status: 'Requested', location: 'รับ/คืนที่นัดหมาย', lessor: 'ผู้ปล่อยเช่า'
+      };
       cart.push(item); saveCart(cart);
-      // decrement remaining and update UI when adding current device
-      try{ if(String(item.id) === String(id)){ remainingCount = Math.max(0, remainingCount-1); document.getElementById('remaining').textContent = 'Remaining '+remainingCount; } }catch(e){}
-      renderMiniCart();
-      // show popup automatically after successful add
-      showMiniCartAtAnchor(true);
+      try { if (String(item.id) === String(id)) { remainingCount = Math.max(0, remainingCount - 1); document.getElementById('remaining').textContent = remainingCount + ' เครื่องว่าง'; } } catch(e) {}
+      renderMiniCart(); showMiniCartAtAnchor(true);
     });
+    document.getElementById('headerCartBtn')&&document.getElementById('headerCartBtn').addEventListener('click',(e)=>{ e.preventDefault(); const popup=document.getElementById('miniCartPopup'); const isHidden=popup.classList.contains('hidden'); showMiniCartAtAnchor(isHidden); });
+    document.getElementById('headerFavBtn')&&document.getElementById('headerFavBtn').addEventListener('click',(e)=>{ e.preventDefault(); const popup=document.getElementById('miniFavPopup'); const isHidden=popup.classList.contains('hidden'); showMiniFavAtAnchor(isHidden); });
 
-    // open mini cart when cart anchor clicked
-    document.getElementById('headerCartBtn') && document.getElementById('headerCartBtn').addEventListener('click', (e)=>{ e.preventDefault(); const popup = document.getElementById('miniCartPopup'); const isHidden = popup.classList.contains('hidden'); showMiniCartAtAnchor(isHidden); });
-    // open mini fav when favorites anchor clicked
-    document.getElementById('headerFavBtn') && document.getElementById('headerFavBtn').addEventListener('click', (e)=>{ e.preventDefault(); const popup = document.getElementById('miniFavPopup'); const isHidden = popup.classList.contains('hidden'); showMiniFavAtAnchor(isHidden); });
+    const favoriteBtn=document.getElementById('favoriteBtn');
+    const favKey='fav-'+(id||decodeURIComponent(nameParam||'unknown'));
+    function updateFavUI(state){ if(state){ favoriteBtn.classList.add('active'); favoriteBtn.textContent='â™¥'; favoriteBtn.setAttribute('aria-pressed','true'); } else { favoriteBtn.classList.remove('active'); favoriteBtn.textContent='â™¡'; favoriteBtn.setAttribute('aria-pressed','false'); } }
+    updateFavUI(localStorage.getItem(favKey)==='1');
+    favoriteBtn.addEventListener('click',()=>{ const now=localStorage.getItem(favKey)==='1'; localStorage.setItem(favKey,now?'0':'1'); updateFavUI(!now); const favs=getFavs(); if(now){ const idx=favs.findIndex(x=>String(x.id)===String(id)); if(idx!==-1){favs.splice(idx,1);saveFavs(favs);} renderMiniFav(); } else { favs.push({id:id||Date.now(),name:document.getElementById('deviceName').textContent,detail:document.getElementById('details')?.textContent||''}); saveFavs(favs); renderMiniFav(); showMiniFavAtAnchor(true); } });
 
-    // favorite (heart) toggle (stores in localStorage demo)
-    const favoriteBtn = document.getElementById('favoriteBtn');
-    const favKey = 'fav-'+(id||decodeURIComponent(name||'unknown'));
-    function updateFavUI(state){
-      if(state){ favoriteBtn.classList.add('active'); favoriteBtn.textContent='♥'; favoriteBtn.setAttribute('aria-pressed','true'); }
-      else { favoriteBtn.classList.remove('active'); favoriteBtn.textContent='♡'; favoriteBtn.setAttribute('aria-pressed','false'); }
-    }
-    const saved = localStorage.getItem(favKey) === '1';
-    updateFavUI(saved);
-    favoriteBtn.addEventListener('click', ()=>{
-      const now = localStorage.getItem(favKey) === '1';
-      localStorage.setItem(favKey, now ? '0' : '1');
-      updateFavUI(!now);
-      // also add/remove from favorites list and show mini fav popup
-      const favs = getFavs();
-      if(now){
-        // was favorited, now unfavoriting -> remove
-        const idx = favs.findIndex(x=>String(x.id) === String(id));
-        if(idx !== -1){ favs.splice(idx,1); saveFavs(favs); }
-        renderMiniFav();
-      } else {
-        // add to favorites
-        const detailText = document.getElementById('details')?.textContent || '';
-        favs.push({ id: id || Date.now(), name: decodeURIComponent(name), detail: detailText });
-        saveFavs(favs);
-        renderMiniFav();
-        showMiniFavAtAnchor(true);
-      }
-    });
-
-    // sample review counts and render rating bars into right-bottom summary
-    const ratingCounts = {5:28,4:9,3:4,2:1,1:1};
-    const total = Object.values(ratingCounts).reduce((a,b)=>a+b,0) || 1;
-    const ratingSummary = document.getElementById('ratingSummary');
-    // show average big number + stars
-    const avg = Math.round((5*ratingCounts[5]+4*ratingCounts[4]+3*ratingCounts[3]+2*ratingCounts[2]+1*ratingCounts[1]) / total);
-    const avgBox = document.createElement('div'); avgBox.style.display='flex'; avgBox.style.alignItems='center'; avgBox.style.justifyContent='flex-end'; avgBox.style.gap='12px'; avgBox.style.marginBottom='8px';
-    avgBox.innerHTML = `<div style="font-size:28px;font-weight:700;">${avg}</div><div class="stars">★★★★★</div><div class="meta-small">${total} reviews</div>`;
-    ratingSummary.appendChild(avgBox);
-    [5,4,3,2,1].forEach(star=>{
-      const row = document.createElement('div'); row.className='rating-row';
-      const fillPct = Math.round((ratingCounts[star]||0)/total*100);
-      row.innerHTML = `<div class="label">${star}</div><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div><div class="count">${ratingCounts[star]||0}</div>`;
-      ratingSummary.appendChild(row);
-    });
-
-    // render sample review items under left details
-    const reviews = [
-      { name: 'Helen M.', date: 'Yesterday', stars:5, text: 'Excellent running shoes. It turns very sharply on the foot.', likes:42, dislikes:0 },
-      { name: 'John K.', date: '2 days ago', stars:4, text: 'Good device, battery lasted long enough for my trip.', likes:12, dislikes:1 }
-    ];
-    const reviewList = document.getElementById('reviewList');
-    reviews.forEach(r=>{
-      const item = document.createElement('div'); item.className = 'review-item';
-      item.innerHTML = `
-        <div style="display:flex;gap:12px;align-items:center;">
-          <div class="avatar-small" aria-hidden></div>
-          <div>
-            <div style="display:flex;align-items:center;gap:8px;"><strong>${r.name}</strong><span class="meta-small">${r.date}</span></div>
-            <div class="review-stars">${'★'.repeat(r.stars)}</div>
-          </div>
-        </div>
-        <p class="review-text">${r.text}</p>
-        <div class="review-actions">
-          <button class="like">👍 <span class="count-like">${r.likes}</span></button>
-          <button class="dislike">👎 <span class="count-dislike">${r.dislikes}</span></button>
-        </div>
-      `;
-      reviewList.appendChild(item);
-    });
-    // wire like/dislike with toggle behavior (one press toggles, pressing again reverts)
-    function reviewKeyFor(item, idx){
-      const name = item.querySelector('strong')?.textContent || 'r'+idx;
-      const txt = (item.querySelector('.review-text') || item.querySelector('.entry-text'))?.textContent || '';
-      try{ return 'review_vote_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(e){ return 'review_vote_'+idx; }
-    }
+    function reviewKeyFor(item, idx){ const name=item.querySelector('strong')?.textContent||'r'+idx; const txt=(item.querySelector('.review-text')||item.querySelector('.entry-text'))?.textContent||''; try{ return 'review_vote_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(e){ return 'review_vote_'+idx; } }
     function setupReviewToggle(item, idx){
-      const likeBtn = item.querySelector('.like, .thumb-like');
-      const dislikeBtn = item.querySelector('.dislike, .thumb-dislike');
-      const likeCountEl = item.querySelector('.count-like');
-      const dislikeCountEl = item.querySelector('.count-dislike');
-      const key = reviewKeyFor(item, idx);
-      const cur = localStorage.getItem(key);
-      if(cur === 'like') likeBtn && likeBtn.classList.add('active');
-      if(cur === 'dislike') dislikeBtn && dislikeBtn.classList.add('active');
-      likeBtn && likeBtn.addEventListener('click', ()=>{
-        const now = localStorage.getItem(key);
-        if(now === 'like'){
-          // toggle off
-          localStorage.removeItem(key);
-          likeBtn.classList.remove('active');
-          if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent||'0',10)-1));
-        } else {
-          // set like, remove dislike if present
-          localStorage.setItem(key,'like');
-          likeBtn.classList.add('active');
-          if(likeCountEl) likeCountEl.textContent = String(parseInt(likeCountEl.textContent||'0',10)+1);
-          if(now === 'dislike'){
-            // decrement dislike count and clear dislike active
-            if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent||'0',10)-1));
-            dislikeBtn && dislikeBtn.classList.remove('active');
-          }
-        }
-      });
-      dislikeBtn && dislikeBtn.addEventListener('click', ()=>{
-        const now = localStorage.getItem(key);
-        if(now === 'dislike'){
-          // toggle off
-          localStorage.removeItem(key);
-          dislikeBtn.classList.remove('active');
-          if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent||'0',10)-1));
-        } else {
-          // set dislike, remove like if present
-          localStorage.setItem(key,'dislike');
-          dislikeBtn.classList.add('active');
-          if(dislikeCountEl) dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent||'0',10)+1);
-          if(now === 'like'){
-            if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent||'0',10)-1));
-            likeBtn && likeBtn.classList.remove('active');
-          }
-        }
-      });
+      const likeBtn=item.querySelector('.like,.thumb-like'); const dislikeBtn=item.querySelector('.dislike,.thumb-dislike');
+      const likeCountEl=item.querySelector('.count-like'); const dislikeCountEl=item.querySelector('.count-dislike');
+      const key=reviewKeyFor(item,idx); const cur=localStorage.getItem(key);
+      if(cur==='like') likeBtn&&likeBtn.classList.add('active');
+      if(cur==='dislike') dislikeBtn&&dislikeBtn.classList.add('active');
+      likeBtn&&likeBtn.addEventListener('click',()=>{ const now=localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); if(likeCountEl) likeCountEl.textContent=String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1)); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); if(likeCountEl) likeCountEl.textContent=String(parseInt(likeCountEl.textContent||'0',10)+1); if(now==='dislike'){ if(dislikeCountEl) dislikeCountEl.textContent=String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1)); dislikeBtn&&dislikeBtn.classList.remove('active'); } } });
+      dislikeBtn&&dislikeBtn.addEventListener('click',()=>{ const now=localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); if(dislikeCountEl) dislikeCountEl.textContent=String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1)); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); if(dislikeCountEl) dislikeCountEl.textContent=String(parseInt(dislikeCountEl.textContent||'0',10)+1); if(now==='like'){ if(likeCountEl) likeCountEl.textContent=String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1)); likeBtn&&likeBtn.classList.remove('active'); } } });
     }
-    document.querySelectorAll('.review-item').forEach((it, i)=>setupReviewToggle(it,i));
+
+    // ─── Lightbox ────────────────────────────────────────────────────────────────
+    let _lbUrls = [], _lbIdx = 0;
+    function openLightbox(urls, idx) {
+      _lbUrls = urls || []; _lbIdx = Math.max(0, Math.min(idx || 0, _lbUrls.length - 1));
+      renderLightbox();
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function renderLightbox() {
+      const img  = document.getElementById('lightboxImg');
+      const ctr  = document.getElementById('lightboxCounter');
+      const prev = document.getElementById('lightboxPrev');
+      const next = document.getElementById('lightboxNext');
+      img.src = _lbUrls[_lbIdx] || '';
+      const many = _lbUrls.length > 1;
+      ctr.textContent = many ? (_lbIdx + 1) + ' / ' + _lbUrls.length : '';
+      prev.style.display = many ? '' : 'none';
+      next.style.display = many ? '' : 'none';
+    }
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+    document.getElementById('lightboxPrev').addEventListener('click', () => { _lbIdx = (_lbIdx - 1 + _lbUrls.length) % _lbUrls.length; renderLightbox(); });
+    document.getElementById('lightboxNext').addEventListener('click', () => { _lbIdx = (_lbIdx + 1) % _lbUrls.length; renderLightbox(); });
+    document.addEventListener('keydown', (e) => {
+      if (!document.getElementById('lightbox').classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft')  { _lbIdx = (_lbIdx - 1 + _lbUrls.length) % _lbUrls.length; renderLightbox(); }
+      if (e.key === 'ArrowRight') { _lbIdx = (_lbIdx + 1) % _lbUrls.length; renderLightbox(); }
+    });
+
+    // ─── Boot ────────────────────────────────────────────────────────────────────
+    if (!id) { showNoDeviceState(); } else { loadDevice(); loadReviews(); }
   </script>
+
 </body>
 </html>
