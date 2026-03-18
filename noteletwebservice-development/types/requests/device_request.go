@@ -23,5 +23,5 @@ type UpdateDeviceRequest struct {
 
 // UpdateDeviceStatusRequest represents the request body for updating device status
 type UpdateDeviceStatusRequest struct {
-	Status string `json:"status" validate:"required,oneof=Available Delivered Returned Overdue"`
+	Status string `json:"status" validate:"required"`
 }

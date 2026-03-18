@@ -18,8 +18,9 @@ const UserContextKey ContextKey = "user"
 
 // UserContext โครงสร้างสำหรับเก็บข้อมูล user ใน context
 type UserContext struct {
-	UserId int
-	Email  string
+	UserId  int
+	Email   string
+	IsAdmin bool
 }
 
 // AuthMiddleware middleware สำหรับตรวจสอบ JWT token
@@ -50,8 +51,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		// เก็บข้อมูล user ลง context
 		userCtx := UserContext{
-			UserId: claims.UserId,
-			Email:  claims.Email,
+			UserId:  claims.UserId,
+			Email:   claims.Email,
+			IsAdmin: claims.IsAdmin,
 		}
 
 		ctx := context.WithValue(r.Context(), UserContextKey, userCtx)
@@ -81,7 +83,7 @@ func KMITLEmailMiddleware(next http.Handler) http.Handler {
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
 		if r.Method == "OPTIONS" {

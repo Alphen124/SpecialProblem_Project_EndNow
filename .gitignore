@@ -1,0 +1,79 @@
+# Notelet .gitignore
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+go.sum
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sql.bak
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+
+# Test outputs
+coverage.txt
+coverage.html
+
+# Docker volumes
+data/
+postgres-data/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist/
+build/
+*.zip
+*.tar.gz
+
+# Documentation temp files
+*.pdf.tmp
+~$*.docx
+
+# PowerShell test scripts (temporary)
+test_*.ps1
+simple_test.ps1
+cleanup_*.ps1
+
+# Deprecated files
+*_deprecated.*
+*.deprecated
+NoteLetVpostgres.txt
+API_DEVICE_DOCUMENTATION.md
+update_device_schema.sql

@@ -36,6 +36,7 @@ type DualRoleUserResponse struct {
 	UserId       int    `json:"user_id"`
 	Email        string `json:"email"`
 	IsActive     bool   `json:"is_active"`
+	IsAdmin      bool   `json:"is_admin"`
 	FName        string `json:"fname,omitempty"`
 	LName        string `json:"lname,omitempty"`
 	Tel          string `json:"tel,omitempty"`

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"noteletwebservice-development/middlewares"
@@ -14,6 +15,23 @@ import (
 	"noteletwebservice-development/types/responses"
 	"noteletwebservice-development/utils"
 )
+
+// adminEmailWhitelist รายชื่ออีเมลที่ได้สิทธิ์ admin อัตโนมัติ
+var adminEmailWhitelist = []string{
+	"admin@notelet.com",
+	"supervisor@notelet.com",
+	"manager@notelet.com",
+}
+
+func isAdminEmail(email string) bool {
+	e := strings.ToLower(strings.TrimSpace(email))
+	for _, a := range adminEmailWhitelist {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
 
 type AuthController struct {
 	DB *sql.DB
@@ -44,8 +62,8 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ตรวจสอบว่าเป็นอีเมล @kmitl.ac.th หรือไม่
-	if !utils.IsKMITLEmail(req.Email) {
+	// ตรวจสอบว่าเป็นอีเมล @kmitl.ac.th หรืออยู่ใน whitelist
+	if !isAdminEmail(req.Email) && !utils.IsKMITLEmail(req.Email) {
 		respondWithError(w, http.StatusBadRequest, "Only @kmitl.ac.th email addresses are allowed", "")
 		return
 	}
@@ -73,13 +91,13 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// สร้างผู้ใช้ใน AppUser table (ไม่มี role แล้ว)
+	// สร้างผู้ใช้ใน AppUser table (ตั้ง is_admin=true สำหรับ whitelist emails)
 	var userId int
 	err = tx.QueryRow(`
-		INSERT INTO appuser (email, passwordhash, isactive, createdat)
-		VALUES ($1, $2, $3, NOW())
+		INSERT INTO appuser (email, passwordhash, isactive, is_admin, createdat)
+		VALUES ($1, $2, $3, $4, NOW())
 		RETURNING userid
-	`, strings.ToLower(req.Email), hashedPassword, true).Scan(&userId)
+	`, strings.ToLower(req.Email), hashedPassword, true, isAdminEmail(req.Email)).Scan(&userId)
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err.Error())
@@ -96,8 +114,8 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = tx.Exec(`
-		INSERT INTO owner (ownerno, name, fname, lname, tel, rating, userid)
-		VALUES ($1, $2, $3, $4, $5, 0, $6)
+		INSERT INTO owner (ownerno, name, fname, lname, tel, userid)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`, nextOwnerNo, req.FName+" "+req.LName, req.FName, req.LName, req.Tel, userId)
 
 	if err != nil {
@@ -116,8 +134,8 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = tx.Exec(`
-		INSERT INTO renter (renterno, name, fname, lname, tel, rating, userid)
-		VALUES ($1, $2, $3, $4, $5, 0, $6)
+		INSERT INTO renter (renterno, name, fname, lname, tel, userid)
+		VALUES ($1, $2, $3, $4, $5, $6)
 	`, nextRenterNo, req.FName+" "+req.LName, req.FName, req.LName, req.Tel, userId)
 
 	if err != nil {
@@ -133,8 +151,8 @@ func (ac *AuthController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// สร้าง JWT tokens (ไม่ต้องส่ง role)
-	accessToken, refreshToken, err := jwt.GenerateTokenPair(userId, req.Email)
+	// สร้าง JWT tokens (is_admin=false สำหรับผู้ใช้ทั่วไป)
+	accessToken, refreshToken, err := jwt.GenerateTokenPair(userId, req.Email, false)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate tokens", err.Error())
 		return
@@ -165,22 +183,23 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ตรวจสอบว่าเป็นอีเมล @kmitl.ac.th หรือไม่
-	if !utils.IsKMITLEmail(req.Email) {
-		respondWithError(w, http.StatusUnauthorized, "Only @kmitl.ac.th email addresses are allowed", "")
-		return
-	}
-
-	// ดึงข้อมูลผู้ใช้จากฐานข้อมูล
+	// ดึงข้อมูลผู้ใช้จากฐานข้อมูล (รวม is_admin)
 	var user models.AppUser
 	err := ac.DB.QueryRow(`
-		SELECT userid, email, passwordhash, isactive, createdat
+		SELECT userid, email, passwordhash, isactive, COALESCE(is_admin, false), createdat
 		FROM appuser
 		WHERE email = $1
 	`, strings.ToLower(req.Email)).Scan(
 		&user.UserId, &user.Email, &user.PasswordHash,
-		&user.IsActive, &user.CreatedAt,
+		&user.IsActive, &user.IsAdmin, &user.CreatedAt,
 	)
+
+	// อีเมลใน whitelist ได้สิทธิ์ admin อัตโนมัติ
+	if isAdminEmail(req.Email) {
+		user.IsAdmin = true
+		// อัปเดต DB ให้ตรงกัน (idempotent)
+		ac.DB.Exec(`UPDATE appuser SET is_admin = true WHERE email = $1`, strings.ToLower(req.Email))
+	}
 
 	if err == sql.ErrNoRows {
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password", "")
@@ -189,6 +208,12 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Database error", err.Error())
+		return
+	}
+
+	// ตรวจสอบว่าเป็นอีเมล @kmitl.ac.th (ยกเว้น admin)
+	if !user.IsAdmin && !utils.IsKMITLEmail(req.Email) {
+		respondWithError(w, http.StatusUnauthorized, "Only @kmitl.ac.th email addresses are allowed", "")
 		return
 	}
 
@@ -207,20 +232,20 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	// ดึงข้อมูลทั้ง Owner และ Renter
 	var ownerNo, renterNo sql.NullInt64
 	var fname, lname, tel string
-	var ownerRating, renterRating sql.NullInt64
+	var ownerRating, renterRating sql.NullFloat64
 
 	// ดึงข้อมูล Owner
 	ac.DB.QueryRow(`
-		SELECT ownerno, fname, lname, tel, rating FROM owner WHERE userid = $1
+		SELECT ownerno, fname, lname, tel, avgrating FROM owner WHERE userid = $1
 	`, user.UserId).Scan(&ownerNo, &fname, &lname, &tel, &ownerRating)
 
 	// ดึงข้อมูล Renter
 	ac.DB.QueryRow(`
-		SELECT renterno, rating FROM renter WHERE userid = $1
+		SELECT renterno, avgrating FROM renter WHERE userid = $1
 	`, user.UserId).Scan(&renterNo, &renterRating)
 
-	// สร้าง JWT tokens (ไม่ต้องส่ง role)
-	accessToken, refreshToken, err := jwt.GenerateTokenPair(user.UserId, user.Email)
+	// สร้าง JWT tokens (รวม is_admin)
+	accessToken, refreshToken, err := jwt.GenerateTokenPair(user.UserId, user.Email, user.IsAdmin)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate tokens", err.Error())
 		return
@@ -231,6 +256,7 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 		UserId:   user.UserId,
 		Email:    user.Email,
 		IsActive: user.IsActive,
+		IsAdmin:  user.IsAdmin,
 		FName:    fname,
 		LName:    lname,
 		Tel:      tel,
@@ -239,14 +265,14 @@ func (ac *AuthController) Login(w http.ResponseWriter, r *http.Request) {
 	if ownerNo.Valid {
 		responseData.OwnerNo = int(ownerNo.Int64)
 		if ownerRating.Valid {
-			responseData.OwnerRating = int(ownerRating.Int64)
+			responseData.OwnerRating = int(ownerRating.Float64)
 		}
 	}
 
 	if renterNo.Valid {
 		responseData.RenterNo = int(renterNo.Int64)
 		if renterRating.Valid {
-			responseData.RenterRating = int(renterRating.Int64)
+			responseData.RenterRating = int(renterRating.Float64)
 		}
 	}
 
@@ -291,8 +317,12 @@ func (ac *AuthController) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// สร้าง access token ใหม่ (ไม่ต้องส่ง role)
-	accessToken, err := jwt.GenerateAccessToken(claims.UserId, claims.Email)
+	// ดึง is_admin ของผู้ใช้จาก DB
+	var isAdmin bool
+	ac.DB.QueryRow(`SELECT COALESCE(is_admin, false) FROM appuser WHERE userid = $1`, claims.UserId).Scan(&isAdmin)
+
+	// สร้าง access token ใหม่ (รวม is_admin)
+	accessToken, err := jwt.GenerateAccessToken(claims.UserId, claims.Email, isAdmin)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate access token", err.Error())
 		return
@@ -316,12 +346,12 @@ func (ac *AuthController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	// ดึงข้อมูลผู้ใช้จากฐานข้อมูล
 	var user models.AppUser
 	err := ac.DB.QueryRow(`
-		SELECT userid, email, isactive, createdat
+		SELECT userid, email, isactive, COALESCE(is_admin, false), createdat
 		FROM appuser
 		WHERE userid = $1
 	`, userCtx.UserId).Scan(
 		&user.UserId, &user.Email,
-		&user.IsActive, &user.CreatedAt,
+		&user.IsActive, &user.IsAdmin, &user.CreatedAt,
 	)
 
 	if err != nil {
@@ -332,16 +362,16 @@ func (ac *AuthController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	// ดึงข้อมูลทั้ง Owner และ Renter
 	var ownerNo, renterNo sql.NullInt64
 	var fname, lname, tel string
-	var ownerRating, renterRating sql.NullInt64
+	var ownerRating, renterRating sql.NullFloat64
 
 	// ดึงข้อมูล Owner
 	ac.DB.QueryRow(`
-		SELECT ownerno, fname, lname, tel, rating FROM owner WHERE userid = $1
+		SELECT ownerno, fname, lname, tel, avgrating FROM owner WHERE userid = $1
 	`, user.UserId).Scan(&ownerNo, &fname, &lname, &tel, &ownerRating)
 
 	// ดึงข้อมูล Renter
 	ac.DB.QueryRow(`
-		SELECT renterno, rating FROM renter WHERE userid = $1
+		SELECT renterno, avgrating FROM renter WHERE userid = $1
 	`, user.UserId).Scan(&renterNo, &renterRating)
 
 	// ส่ง response พร้อมข้อมูลทั้ง Owner และ Renter
@@ -349,6 +379,7 @@ func (ac *AuthController) GetProfile(w http.ResponseWriter, r *http.Request) {
 		UserId:   user.UserId,
 		Email:    user.Email,
 		IsActive: user.IsActive,
+		IsAdmin:  user.IsAdmin,
 		FName:    fname,
 		LName:    lname,
 		Tel:      tel,
@@ -357,14 +388,14 @@ func (ac *AuthController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	if ownerNo.Valid {
 		responseData.OwnerNo = int(ownerNo.Int64)
 		if ownerRating.Valid {
-			responseData.OwnerRating = int(ownerRating.Int64)
+			responseData.OwnerRating = int(ownerRating.Float64)
 		}
 	}
 
 	if renterNo.Valid {
 		responseData.RenterNo = int(renterNo.Int64)
 		if renterRating.Valid {
-			responseData.RenterRating = int(renterRating.Int64)
+			responseData.RenterRating = int(renterRating.Float64)
 		}
 	}
 
@@ -372,7 +403,112 @@ func (ac *AuthController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	respondWithSuccess(w, http.StatusOK, "Profile retrieved successfully", responseData)
 }
 
-// Helper functions
+// AdminRegister สร้างบัญชี admin (ใช้ได้กับอีเมลใดก็ได้ ต้องใช้ X-Admin-Secret header)
+func (ac *AuthController) AdminRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		respondWithError(w, http.StatusMethodNotAllowed, "Method not allowed", "")
+		return
+	}
+
+	// ตรวจสอบ admin secret header
+	adminSecret := os.Getenv("ADMIN_SECRET")
+	if adminSecret == "" {
+		adminSecret = "notelet-admin-secret-2026"
+	}
+	if r.Header.Get("X-Admin-Secret") != adminSecret {
+		respondWithError(w, http.StatusForbidden, "Invalid admin secret", "")
+		return
+	}
+
+	var req requests.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondWithError(w, http.StatusBadRequest, "Invalid request body", err.Error())
+		return
+	}
+
+	if req.Email == "" || req.Password == "" || req.FName == "" || req.LName == "" {
+		respondWithError(w, http.StatusBadRequest, "Email, password, fname, lname are required", "")
+		return
+	}
+
+	// ตรวจ email ซ้ำ
+	var existing int
+	err := ac.DB.QueryRow("SELECT userid FROM appuser WHERE email = $1", strings.ToLower(req.Email)).Scan(&existing)
+	if err != sql.ErrNoRows {
+		respondWithError(w, http.StatusConflict, "Email already registered", "")
+		return
+	}
+
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to process password", err.Error())
+		return
+	}
+
+	tx, err := ac.DB.Begin()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Database error", err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var userId int
+	err = tx.QueryRow(`
+		INSERT INTO appuser (email, passwordhash, isactive, is_admin, createdat)
+		VALUES ($1, $2, $3, $4, NOW())
+		RETURNING userid
+	`, strings.ToLower(req.Email), hashedPassword, true, true).Scan(&userId)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to create admin user", err.Error())
+		return
+	}
+
+	// สร้าง Owner record สำหรับ admin ด้วย
+	var nextOwnerNo int
+	tx.QueryRow(`SELECT COALESCE(MAX(ownerno), 0) + 1 FROM owner`).Scan(&nextOwnerNo)
+	tx.Exec(`INSERT INTO owner (ownerno, name, fname, lname, tel, userid) VALUES ($1, $2, $3, $4, $5, $6)`,
+		nextOwnerNo, req.FName+" "+req.LName, req.FName, req.LName,
+		nullableTel(req.Tel), userId)
+
+	// สร้าง Renter record สำหรับ admin ด้วย
+	var nextRenterNo int
+	tx.QueryRow(`SELECT COALESCE(MAX(renterno), 0) + 1 FROM renter`).Scan(&nextRenterNo)
+	tx.Exec(`INSERT INTO renter (renterno, name, fname, lname, tel, userid) VALUES ($1, $2, $3, $4, $5, $6)`,
+		nextRenterNo, req.FName+" "+req.LName, req.FName, req.LName,
+		nullableTel(req.Tel), userId)
+
+	if err = tx.Commit(); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to complete registration", err.Error())
+		return
+	}
+
+	accessToken, refreshToken, err := jwt.GenerateTokenPair(userId, req.Email, true)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to generate tokens", err.Error())
+		return
+	}
+
+	respondWithSuccess(w, http.StatusCreated, "Admin registered successfully", responses.AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User: responses.DualRoleUserResponse{
+			UserId:   userId,
+			Email:    req.Email,
+			IsActive: true,
+			IsAdmin:  true,
+			FName:    req.FName,
+			LName:    req.LName,
+			Tel:      req.Tel,
+		},
+	})
+}
+
+func nullableTel(tel string) string {
+	if tel == "" {
+		return "N/A"
+	}
+	return tel
+}
 func respondWithError(w http.ResponseWriter, code int, message, error string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

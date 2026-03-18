@@ -151,7 +151,7 @@ func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request
 	`, user.UserId).Scan(&renterNo, &renterRating)
 
 	// สร้าง JWT tokens (ไม่ต้องส่ง role)
-	accessToken, refreshToken, err := jwt.GenerateTokenPair(user.UserId, user.Email)
+	accessToken, refreshToken, err := jwt.GenerateTokenPair(user.UserId, user.Email, false)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to generate tokens", err.Error())
 		return
