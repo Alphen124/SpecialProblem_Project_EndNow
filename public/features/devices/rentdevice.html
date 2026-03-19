@@ -1,0 +1,851 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet â€” Rent Device</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat-notifications.js"></script>
+  <style>
+    /* Small, page-specific layout to approximate the provided design */
+    .rent-device { display:flex; gap:48px; padding:48px 0; justify-content:center; align-items:flex-start; max-width:1200px; margin:0 auto; }
+    .device-gallery { flex:0 0 720px; background:#C4DEFD; height:480px; border-radius:6px; }
+    .device-thumbs { display:flex; gap:16px; margin-top:16px; }
+    .thumb { width:220px; height:188px; background:#C4DEFD; border-radius:6px; }
+    .details-left { max-width:724px; }
+    .device-info { flex:1; max-width:540px; }
+    .device-info h1 { font-size:40px; margin:0 0 8px; }
+    .price { font-size:52px; font-weight:700; margin:8px 0 24px; }
+    .date-buttons { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .date-buttons button{ padding:10px 18px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer }
+    .date-buttons button.selected{ background:#111; color:#fff; border-color:#111 }
+    .time-row { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    .time-row select { padding:10px;border-radius:8px;border:1px solid #ccc }
+    .add-cart { display:inline-block; padding:18px 34px; background:#000;color:#fff;border-radius:8px;text-decoration:none; }
+    .meta-small { color:#666; margin-bottom:8px }
+
+    /* Reviews / rating bars */
+    .rating-row { display:flex; align-items:center; gap:8px; margin-bottom:8px }
+    .rating-row .label { width:22px; font-size:14px }
+    .rating-row .bar { flex:1; height:12px; background:#eee; border-radius:8px; overflow:hidden }
+    .rating-row .bar > .fill { height:100%; background:#FFC000; width:0% }
+    .rating-row .count { width:28px; text-align:right; font-size:14px }
+    /* Review list styles */
+    .review-list { margin-top:12px; }
+    .review-item { padding:12px 10px; border-radius:8px; border:1px solid #f0f0f0; margin-bottom:12px; background:#fff }
+    .avatar-small { width:44px; height:44px; border-radius:50%; background:#ddd; display:inline-block; vertical-align:middle }
+    .review-text { margin:8px 0 6px; color:#111 }
+    .review-actions { display:flex; gap:12px; align-items:center }
+    .like, .dislike { background:#fff; border:1px solid #eee; padding:6px 10px; border-radius:6px; cursor:pointer }
+    .like:hover, .dislike:hover { background:#f7f7f7 }
+    .like.active, .dislike.active { background:#e6f7ff; border-color:#60a5fa; color:#0b61d6 }
+    /* remove vertical centering so content sits near top */
+    main > section.container { min-height: auto; display:block }
+    .review-stars { color:#FFC000; margin-top:6px }
+    /* Mini cart popup styles */
+    .mini-cart { background:transparent; z-index:9999; }
+    .mini-cart .mini-cart-inner { width:320px; box-shadow:0 6px 24px rgba(0,0,0,0.12); background:#fff; border-radius:8px; padding:12px; }
+    .mini-cart .mini-cart-close { float:right; border:0; background:transparent; font-size:20px; cursor:pointer }
+    .mini-item { display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid #f2f2f2 }
+    .mini-item .mini-name { font-weight:600 }
+    .mini-meta { font-size:12px; color:#666 }
+    .mini-cart-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px }
+    .mini-cart.hidden{ display:none }
+    /* ── Lightbox ────────────────────────────────────────────── */
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.93); z-index:9999; align-items:center; justify-content:center; }
+    .lightbox.open { display:flex; }
+    .lightbox-img { max-width:88vw; max-height:88vh; object-fit:contain; border-radius:6px; box-shadow:0 8px 40px rgba(0,0,0,.5); user-select:none; pointer-events:none; }
+    .lightbox-close { position:absolute; top:18px; right:24px; background:rgba(255,255,255,.12); border:none; color:#fff; font-size:22px; cursor:pointer; border-radius:50%; width:42px; height:42px; display:flex; align-items:center; justify-content:center; transition:background .2s; line-height:1; }
+    .lightbox-close:hover { background:rgba(255,255,255,.28); }
+    .lightbox-nav { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.12); border:none; color:#fff; font-size:32px; width:52px; height:52px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:50%; transition:background .2s; }
+    .lightbox-nav:hover { background:rgba(255,255,255,.28); }
+    .lightbox-prev { left:20px; } .lightbox-next { right:20px; }
+    .lightbox-counter { color:rgba(255,255,255,.6); position:absolute; bottom:20px; font-size:13px; }
+    /* ── Booking Card ────────────────────────────────────────── */
+    .booking-card { background:#f8faff; border:1.5px solid #dde8ff; border-radius:16px; padding:22px 24px; margin-top:20px; }
+    .booking-title { font-size:16px; font-weight:700; color:#1a1a2e; margin-bottom:18px; }
+    .booking-dates { display:grid; grid-template-columns:1fr 28px 1fr; align-items:end; gap:8px; margin-bottom:14px; }
+    .booking-dates-arrow { text-align:center; color:#bbb; font-size:18px; padding-bottom:10px; }
+    .booking-field { display:flex; flex-direction:column; gap:5px; }
+    .booking-field label { font-size:11px; font-weight:700; color:#7b8ab8; text-transform:uppercase; letter-spacing:.5px; }
+    .booking-field input[type="date"], .booking-field select { width:100%; padding:9px 12px; border:1.5px solid #dde4f5; border-radius:10px; font-size:14px; background:#fff; outline:none; box-sizing:border-box; transition:border-color .2s,box-shadow .2s; font-family:inherit; color:#1a1a2e; }
+    .booking-field input[type="date"]:focus, .booking-field select:focus { border-color:#4a90e2; box-shadow:0 0 0 3px rgba(74,144,226,.1); }
+    .booking-times { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+    .booking-summary { background:#fff; border-radius:10px; padding:12px 16px; margin-bottom:18px; border:1px solid #edf0fa; }
+    .booking-summary.hidden { display:none; }
+    .b-sum-row { display:flex; justify-content:space-between; font-size:13px; color:#666; padding:4px 0; }
+    .b-sum-row.total { font-size:15px; font-weight:700; color:#1a1a2e; border-top:1px solid #eee; margin-top:6px; padding-top:10px; }
+    .booking-actions { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .btn-book { flex:1; padding:13px 18px; background:#1a1a2e; color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:background .2s,transform .1s; letter-spacing:.2px; }
+    .btn-book:hover { background:#16213e; }
+    .btn-book:active { transform:scale(.98); }
+    .booking-meta-row { text-align:center; font-size:13px; color:#aaa; margin-top:4px; }
+    .device-gallery { cursor:zoom-in; }
+    .thumb { cursor:zoom-in; }
+    /* ── Empty-state helpers ────────────────────────────────── */
+    .empty-state { text-align:center; padding:24px 0; color:#aaa; font-size:14px; }
+    .empty-state .empty-icon { font-size:32px; margin-bottom:8px; }
+
+    /* ── Review reply styles ────────────────────────────────── */
+    .review-reply { background:#f5f9ff; border-left:3px solid #4a90e2; border-radius:0 8px 8px 0; padding:10px 14px; margin-top:10px; font-size:13px; }
+    .review-reply .reply-label { font-weight:700; color:#4a90e2; font-size:12px; text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+    .review-reply .reply-text { color:#333; line-height:1.5; }
+    .review-reply .reply-date { color:#aaa; font-size:11px; margin-top:4px; }
+    .reply-form { margin-top:10px; background:#fffdf0; border:1px dashed #e0c84a; border-radius:8px; padding:10px 12px; }
+    .reply-form textarea { width:100%; min-height:72px; border:1px solid #ddd; border-radius:6px; padding:8px 10px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box; outline:none; transition:border-color .2s; }
+    .reply-form textarea:focus { border-color:#4a90e2; }
+    .reply-form .reply-submit { margin-top:6px; padding:7px 18px; background:#1a1a2e; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity .2s; }
+    .reply-form .reply-submit:hover { opacity:.82; }
+    .reply-form .reply-submit:disabled { opacity:.5; cursor:not-allowed; }
+    .reply-form-label { font-size:12px; color:#888; margin-bottom:6px; font-weight:600; }
+
+    /* ── Chat Bubble Button ────────────────────────────────────── */
+    .chat-bubble-btn {
+      position:fixed; bottom:28px; right:28px;
+      width:58px; height:58px; border-radius:50%;
+      background:linear-gradient(135deg,#667eea,#764ba2);
+      border:none; cursor:pointer;
+      box-shadow:0 4px 20px rgba(102,126,234,.45);
+      display:none; align-items:center; justify-content:center;
+      font-size:26px; color:#fff;
+      transition:transform .2s,box-shadow .2s;
+      z-index:1000;
+    }
+    .chat-bubble-btn.visible { display:flex; }
+    .chat-bubble-btn:hover { transform:scale(1.08); box-shadow:0 6px 28px rgba(102,126,234,.6); }
+    .chat-bubble-btn .chat-badge {
+      position:absolute; top:-4px; right:-4px;
+      background:#ef4444; color:#fff;
+      font-size:10px; font-weight:700;
+      width:18px; height:18px; border-radius:50%;
+      display:none; align-items:center; justify-content:center;
+    }
+    @media (max-width:480px) {
+      .chat-bubble-btn { bottom:16px; right:16px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/features/devices/devices.html" class="active">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html">จัดการอุปกรณ์</a>
+        <a href="/features/devices/devicehistory.html">ประวัติการยืม</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container" style="padding-top:48px;">
+      <div id="rentWrap" class="rent-device">
+        <!-- Left column: gallery, thumbs, details & reviews -->
+        <div>
+          <div class="device-gallery" id="mainImage" aria-hidden></div>
+          <div class="device-thumbs">
+            <div class="thumb" aria-hidden></div>
+            <div class="thumb" aria-hidden></div>
+            <div class="thumb" aria-hidden></div>
+          </div>
+
+          <div class="details-left" style="margin-top:24px;">
+            <h3>รายละเอียด</h3>
+            <p id="details">คำอธิบาย, สเปค, สถานที่รับและคืน <span style="color:#D00">*ปรับถ้าคืนล่าช้า*</span></p>
+
+            <h3 style="margin-top:18px;">รีวิว</h3>
+            <div class="meta-small">คะแนนเฉลี่ย <strong>4</strong>  42 รีวิว</div>
+            <div id="reviewList" class="review-list" aria-live="polite"></div>
+          </div>
+        </div>
+
+        <!-- Right column: device info, controls, rating summary at bottom-right -->
+        <div class="device-info">
+          <div class="meta-small" id="brandName">ชื่อแบรนด์</div>
+          <h1 id="deviceName">ชื่ออุปกรณ์</h1>
+          <div class="meta-small" id="reviews"></div>
+          <div class="price" id="devicePrice">10.00 บาท/วัน</div>
+
+          <!-- ── Booking Card ─────────────────────────────────────── -->
+          <div class="booking-card" id="bookingCard">
+            <div class="booking-title">&#x1F4CB; จองอุปกรณ์นี้</div>
+
+            <div class="booking-dates">
+              <div class="booking-field">
+                <label for="startDate">วันที่เริ่มต้น</label>
+                <input type="date" id="startDate">
+              </div>
+              <div class="booking-dates-arrow">&#x2192;</div>
+              <div class="booking-field">
+                <label for="endDate">วันที่สิ้นสุด</label>
+                <input type="date" id="endDate">
+              </div>
+            </div>
+
+            <div class="booking-times">
+              <div class="booking-field">
+                <label for="pickup">เวลารับ</label>
+                <select id="pickup"></select>
+              </div>
+              <div class="booking-field">
+                <label for="returnt">เวลาคืน</label>
+                <select id="returnt"></select>
+              </div>
+            </div>
+
+            <div class="booking-summary hidden" id="bookingSummary">
+              <div class="b-sum-row"><span>ระยะเวลา</span><span id="summaryDays">&#x2014;</span></div>
+              <div class="b-sum-row"><span>ราคา / วัน</span><span id="summaryPpd">&#x2014;</span></div>
+              <div class="b-sum-row total"><span>รวมทั้งหมด</span><span id="summaryTotal">&#x2014;</span></div>
+            </div>
+
+            <div class="booking-actions">
+              <button id="addCartBtn" class="btn-book">&#x1F4E8; ส่งคำขอเช่า</button>
+            </div>
+            <div class="booking-meta-row">
+              <span id="remaining" class="meta-small">กำลังโหลด&#x2026;</span>
+            </div>
+          </div>
+
+          <!-- Rating summary positioned to the right/bottom area -->
+          <div id="ratingSummary" style="margin-top:30px;text-align:right;">
+            <!-- rating bars will render here -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ── Lightbox ──────────────────────────────────────────────────── -->
+  <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Image viewer">
+    <button id="lightboxClose" class="lightbox-close" aria-label="Close">&#x00D7;</button>
+    <button id="lightboxPrev" class="lightbox-nav lightbox-prev" aria-label="Previous">&#x2039;</button>
+    <img id="lightboxImg" class="lightbox-img" src="" alt="Full size image">
+    <button id="lightboxNext" class="lightbox-nav lightbox-next" aria-label="Next">&#x203A;</button>
+    <div id="lightboxCounter" class="lightbox-counter"></div>
+  </div>
+
+  <!-- Mini cart popup -->
+  <div id="miniCartPopup" class="mini-cart hidden" aria-hidden="true">
+    <div class="mini-cart-inner">
+      <button id="miniCartClose" class="mini-cart-close" aria-label="Close">Ã—</button>
+      <div id="miniCartItems"></div>
+      <div class="mini-cart-footer">
+        <div id="miniCartTotal" class="mini-cart-total"></div>
+        <button id="miniCartCheckout" class="btn btn-cta">ชำระเงิน</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Confirm checkout dialog -->
+  <div id="confirmDialog" class="mini-cart hidden" aria-hidden="true" style="position:fixed;left:0;top:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:10000;">
+    <div class="mini-cart-inner" style="width:360px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>ยืนยันการชำระเงิน</strong>
+        <button id="confirmClose" class="mini-cart-close" aria-label="Close">Ã—</button>
+      </div>
+      <div style="margin-top:12px;">คุณแน่ใจหรือไม่ว่าต้องการชำระเงินสำหรับรายการเหล่านี้?</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+        <button id="confirmNo" class="btn btn-ghost">ยกเลิก</button>
+        <button id="confirmYes" class="btn btn-cta">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Chat Bubble Button (reopens chat popup) ─────────────────────────── -->
+  <button id="chatBubbleBtn" class="chat-bubble-btn" aria-label="เปิดหน้าแชท" title="แชทกับผู้ปล่อยเช่า">
+    &#x1F4AC;
+    <span id="chatBubbleBadge" class="chat-badge" aria-hidden="true"></span>
+  </button>
+
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script src="/js/navpopups.js"></script>
+  <script>
+    function getQueryParam(name){ return new URL(window.location.href).searchParams.get(name); }
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    const id   = getQueryParam('id');
+    const nameParam = getQueryParam('name') || 'Device Name';
+
+    // Set a placeholder title immediately while loading
+    document.getElementById('deviceName').textContent = decodeURIComponent(nameParam);
+    document.title = 'Notelet — ' + decodeURIComponent(nameParam);
+
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', (e)=>{ e.preventDefault(); const q = headerSearchInput && headerSearchInput.value; if(q) { window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q); } hideSearch(); });
+    })();
+
+    async function loadDevice() {
+      if (!id) return;
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${id}`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load device');
+        const d = result.data;
+
+        // Name & title
+        document.getElementById('deviceName').textContent = d.name || decodeURIComponent(nameParam);
+        document.title = 'Notelet — ' + (d.name || decodeURIComponent(nameParam));
+
+        // Brand / type
+        document.getElementById('brandName').textContent = d.type || 'Device';
+
+        // Price
+        document.getElementById('devicePrice').textContent =
+          d.price != null ? parseFloat(d.price).toFixed(2) + ' Baht/day' : '—';
+
+        // Description
+        const detailsEl = document.getElementById('details');
+        if (d.description && d.description.trim()) {
+          detailsEl.textContent = d.description;
+        } else {
+          detailsEl.innerHTML = '<em style="color:#bbb;">ไม่มีคำอธิบายสำหรับอุปกรณ์นี้</em>';
+        }
+
+        // Remaining count from API (if available)
+        window._remainingCount = d.remaining != null ? d.remaining : 1;
+        remainingCount = window._remainingCount;
+        document.getElementById('remaining').textContent = `${remainingCount} เครื่องว่าง`;
+        // Update booking summary price if already calculated
+        updateBookingSummary();
+
+        // Images
+        let imageUrls = [];
+        if (d.imageUrl) {
+          try { imageUrls = JSON.parse(d.imageUrl); if (!Array.isArray(imageUrls)) imageUrls = [d.imageUrl]; }
+          catch { imageUrls = [d.imageUrl]; }
+        }
+        const mainImg = document.getElementById('mainImage');
+        const thumbsWrap = document.querySelector('.device-thumbs');
+        window._allImageUrls = imageUrls;
+        window._lightboxCurrentIdx = 0;
+        if (imageUrls.length > 0) {
+          mainImg.style.backgroundImage = `url('${imageUrls[0]}')`;
+          mainImg.style.backgroundSize = 'cover';
+          mainImg.style.backgroundPosition = 'center';
+          // Click main image → open lightbox
+          mainImg.onclick = () => openLightbox(window._allImageUrls || [], window._lightboxCurrentIdx || 0);
+          // Thumbnails
+          thumbsWrap.innerHTML = '';
+          imageUrls.forEach((url, i) => {
+            const t = document.createElement('div');
+            t.className = 'thumb';
+            t.style.backgroundImage = `url('${url}')`;
+            t.style.backgroundSize = 'cover';
+            t.style.backgroundPosition = 'center';
+            t.addEventListener('click', () => {
+              mainImg.style.backgroundImage = `url('${url}')`;
+              thumbsWrap.querySelectorAll('.thumb').forEach(x => x.style.outline = '');
+              t.style.outline = '2px solid #000';
+              window._lightboxCurrentIdx = i;
+            });
+            if (i === 0) t.style.outline = '2px solid #000';
+            thumbsWrap.appendChild(t);
+          });
+        } else {
+          mainImg.style.background = '#e8ecf0';
+          mainImg.title = 'No images available';
+          thumbsWrap.innerHTML = '<p class="empty-state" style="font-size:13px;color:#bbb;">No images</p>';
+        }
+
+        // Store price per day for cart calculation
+        window._pricePerDay = parseFloat(d.price) || 0;
+
+        // Store owner's userId for review loading
+        window._ownerUserId = d.ownerUserId || 0;
+
+        // Hide like/dislike actions on admin-created devices
+        if (d.isAdminDevice) {
+          document.querySelectorAll('.like, .dislike, .review-actions').forEach(function(el) {
+            el.style.display = 'none';
+          });
+          // Update price display and button for faculty borrow
+          document.getElementById('devicePrice').textContent = '📚 ยืมจากคณะ (ฟรี)';
+          window._pricePerDay = 0;
+          window._isAdminDevice = true;
+          const cartBtn = document.getElementById('addCartBtn');
+          if (cartBtn) cartBtn.textContent = '📚 ส่งคำขอยืม';
+        }
+
+      } catch (err) {
+        console.error('Error loading device:', err);
+        document.getElementById('details').innerHTML = '<em style="color:#d32f2f;">ไม่สามารถโหลดข้อมูลอุปกรณ์ได้</em>';
+        document.getElementById('remaining').textContent = 'ไม่มีข้อมูล';
+      }
+    }
+
+    // called when no id in URL
+    function showNoDeviceState() {
+      document.getElementById('rentWrap').innerHTML = `
+        <div class="empty-state" style="padding:80px 20px;width:100%;">
+          <div class="empty-icon">&#x1F4F1;</div>
+          <div style="font-size:18px;font-weight:600;color:#333;">ไม่พบอุปกรณ์</div>
+          <div style="margin-top:8px;">ไม่มีข้อมูลอุปกรณ์สำหรับหน้านี้</div>
+          <a href="/" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#1a1a2e;color:#fff;border-radius:10px;text-decoration:none;">กลับหน้าหลัก</a>
+        </div>`;
+    }
+
+    // ─── Get current logged-in user ID from JWT ───────────────────────────────
+    function getCurrentUserId() {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return 0;
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return payload.user_id || 0;
+      } catch (_) { return 0; }
+    }
+
+    async function loadReviews() {
+      if (!id) return;
+      const reviewListEl = document.getElementById('reviewList');
+      const ratingSummaryEl = document.getElementById('ratingSummary');
+      const reviewsMetaEl = document.getElementById('reviews');
+
+      reviewListEl.innerHTML = '<p style="color:#999;padding:8px 0;">กำลังโหลดรีวิว…</p>';
+      ratingSummaryEl.innerHTML = '';
+
+      // Wait for ownerUserId to be set by loadDevice()
+      let ownerUserId = window._ownerUserId || 0;
+      if (!ownerUserId) {
+        await new Promise(resolve => setTimeout(resolve, 600));
+        ownerUserId = window._ownerUserId || 0;
+      }
+      if (!ownerUserId) {
+        reviewListEl.innerHTML = '<div class="empty-state"><div class="empty-icon">\u2B50</div><div>\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e23\u0e35\u0e27\u0e34\u0e27</div></div>';
+        return;
+      }
+
+      const currentUserId = getCurrentUserId();
+      const isOwner = currentUserId > 0 && currentUserId === ownerUserId;
+
+      try {
+        const res = await fetch(`http://localhost:3001/api/users/${ownerUserId}/reviews?role=renter`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load reviews');
+
+        const { reviews, totalReviews, avgRatingAsOwner } = result.data;
+        const totalCount = totalReviews || 0;
+        const averageRating = avgRatingAsOwner || 0;
+        const avgRounded = Math.round(averageRating);
+        const stars = '\u2605'.repeat(avgRounded) + '\u2606'.repeat(5 - avgRounded);
+
+        // Update right column header meta
+        if (reviewsMetaEl) reviewsMetaEl.innerHTML =
+          `<span style="color:#FFC000;">${stars}</span> ${totalCount} \u0e23\u0e35\u0e27\u0e34\u0e27`;
+
+        // Update section header meta below heading
+        const metaSmallEl = document.querySelector('.details-left .meta-small');
+        if (metaSmallEl) metaSmallEl.innerHTML =
+          `\u0e04\u0e30\u0e41\u0e19\u0e19\u0e40\u0e09\u0e25\u0e35\u0e48\u0e22 <strong>${averageRating.toFixed(1)}</strong> &nbsp;\u2014&nbsp; ${totalCount} \u0e23\u0e35\u0e27\u0e34\u0e27`;
+
+        const ratingCounts = {5:0, 4:0, 3:0, 2:0, 1:0};
+        (reviews || []).forEach(rv => { if (rv.rating >= 1 && rv.rating <= 5) ratingCounts[rv.rating]++; });
+
+        ratingSummaryEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:8px;">
+            <div style="font-size:28px;font-weight:700;">${averageRating.toFixed(1)}</div>
+            <div style="color:#FFC000;font-size:22px;">${stars}</div>
+            <div class="meta-small">${totalCount} \u0e23\u0e35\u0e27\u0e34\u0e27</div>
+          </div>`;
+        [5,4,3,2,1].forEach(star => {
+          const row = document.createElement('div'); row.className = 'rating-row';
+          const fillPct = totalCount > 0 ? Math.round((ratingCounts[star]||0)/totalCount*100) : 0;
+          row.innerHTML = `<div class="label">${star}</div><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div><div class="count">${ratingCounts[star]||0}</div>`;
+          ratingSummaryEl.appendChild(row);
+        });
+
+        if (!reviews || reviews.length === 0) {
+          reviewListEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">&#x1F4AC;</div>
+              <div>\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e23\u0e35\u0e27\u0e34\u0e27</div>
+              <div style="font-size:12px;margin-top:4px;">\u0e40\u0e1b\u0e47\u0e19\u0e04\u0e19\u0e41\u0e23\u0e01\u0e17\u0e35\u0e48\u0e23\u0e35\u0e27\u0e34\u0e27\u0e1c\u0e39\u0e49\u0e1b\u0e25\u0e48\u0e2d\u0e22\u0e40\u0e0a\u0e48\u0e32\u0e04\u0e19\u0e19\u0e35\u0e49!</div>
+            </div>`;
+          ratingSummaryEl.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x2B50;</div><div>\u0e22\u0e31\u0e07\u0e44\u0e21\u0e48\u0e21\u0e35\u0e04\u0e30\u0e41\u0e19\u0e19</div></div>';
+          return;
+        }
+
+        reviewListEl.innerHTML = '';
+        reviews.forEach((rv, i) => {
+          const starStr = '\u2605'.repeat(rv.rating) + '\u2606'.repeat(5 - rv.rating);
+          const date = new Date(rv.createdAt).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+          const initial = rv.reviewerEmail ? rv.reviewerEmail.charAt(0).toUpperCase() : '?';
+          const masked = rv.reviewerEmail ? rv.reviewerEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : '\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38';
+
+          let replyHtml = '';
+          if (rv.replyText && rv.replyText.trim()) {
+            const replyDate = rv.repliedAt
+              ? new Date(rv.repliedAt).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' })
+              : '';
+            replyHtml = `
+              <div class="review-reply">
+                <div class="reply-label">\u21a9 \u0e1c\u0e39\u0e49\u0e1b\u0e25\u0e48\u0e2d\u0e22\u0e40\u0e0a\u0e48\u0e32\u0e15\u0e2d\u0e1a\u0e01\u0e25\u0e31\u0e1a</div>
+                <div class="reply-text">${escapeHtml(rv.replyText)}</div>
+                ${replyDate ? `<div class="reply-date">${escapeHtml(replyDate)}</div>` : ''}
+              </div>`;
+          } else if (isOwner) {
+            replyHtml = `
+              <div class="reply-form" id="replyForm-${rv.reviewNo}">
+                <div class="reply-form-label">\u21a9 \u0e15\u0e2d\u0e1a\u0e01\u0e25\u0e31\u0e1a\u0e23\u0e35\u0e27\u0e34\u0e27\u0e19\u0e35\u0e49 (\u0e40\u0e09\u0e1e\u0e32\u0e30\u0e04\u0e38\u0e13\u0e43\u0e19\u0e10\u0e32\u0e19\u0e30\u0e1c\u0e39\u0e49\u0e1b\u0e25\u0e48\u0e2d\u0e22\u0e40\u0e0a\u0e48\u0e32)</div>
+                <textarea id="replyText-${rv.reviewNo}" placeholder="\u0e40\u0e02\u0e35\u0e22\u0e19\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21\u0e15\u0e2d\u0e1a\u0e01\u0e25\u0e31\u0e1a\u2026"></textarea>
+                <button class="reply-submit" data-reviewno="${rv.reviewNo}">\u0e2a\u0e48\u0e07\u0e04\u0e33\u0e15\u0e2d\u0e1a</button>
+              </div>`;
+          }
+
+          const item = document.createElement('div'); item.className = 'review-item';
+          item.innerHTML = `
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div class="avatar-small" aria-hidden style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;background:#4a90e2;">${escapeHtml(initial)}</div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;"><strong>${escapeHtml(masked)}</strong><span class="meta-small">${escapeHtml(date)}</span></div>
+                <div class="review-stars" style="color:#FFC000;">${starStr}</div>
+              </div>
+            </div>
+            <p class="review-text">${rv.description ? escapeHtml(rv.description) : '<em style="color:#aaa">\u0e44\u0e21\u0e48\u0e44\u0e14\u0e49\u0e23\u0e30\u0e1a\u0e38\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21</em>'}</p>
+            ${replyHtml}`;
+          reviewListEl.appendChild(item);
+
+          if (isOwner && (!rv.replyText || !rv.replyText.trim())) {
+            const btn = item.querySelector('.reply-submit[data-reviewno]');
+            btn && btn.addEventListener('click', () => submitReply(rv.reviewNo, item));
+          }
+        });
+
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        reviewListEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">&#x26A0;&#xFE0F;</div>
+            <div>\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e42\u0e2b\u0e25\u0e14\u0e23\u0e35\u0e27\u0e34\u0e27\u0e44\u0e14\u0e49</div>
+            <div style="font-size:12px;margin-top:4px;color:#d32f2f;">${escapeHtml(err.message)}</div>
+          </div>`;
+        ratingSummaryEl.innerHTML = '<div class="empty-state"><div>\u2014</div></div>';
+      }
+    }
+
+    async function submitReply(reviewNo, itemEl) {
+      const textarea = document.getElementById('replyText-' + reviewNo);
+      const btn = itemEl.querySelector('.reply-submit[data-reviewno="' + reviewNo + '"]');
+      if (!textarea) return;
+      const text = textarea.value.trim();
+      if (!text) { textarea.focus(); return; }
+
+      const token = localStorage.getItem('access_token');
+      if (!token) { alert('\u0e01\u0e23\u0e38\u0e13\u0e32\u0e40\u0e02\u0e49\u0e32\u0e2a\u0e39\u0e48\u0e23\u0e30\u0e1a\u0e1a\u0e01\u0e48\u0e2d\u0e19'); return; }
+
+      if (btn) { btn.disabled = true; btn.textContent = '\u0e01\u0e33\u0e25\u0e31\u0e07\u0e2a\u0e48\u0e07\u2026'; }
+      try {
+        const res = await fetch(`http://localhost:3001/api/reviews/${reviewNo}/reply`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ replyText: text })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to save reply');
+
+        const formEl = document.getElementById('replyForm-' + reviewNo);
+        if (formEl) {
+          const now = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' });
+          const replyDiv = document.createElement('div');
+          replyDiv.className = 'review-reply';
+          replyDiv.innerHTML = `
+            <div class="reply-label">\u21a9 \u0e1c\u0e39\u0e49\u0e1b\u0e25\u0e48\u0e2d\u0e22\u0e40\u0e0a\u0e48\u0e32\u0e15\u0e2d\u0e1a\u0e01\u0e25\u0e31\u0e1a</div>
+            <div class="reply-text">${escapeHtml(text)}</div>
+            <div class="reply-date">${now}</div>`;
+          formEl.replaceWith(replyDiv);
+        }
+      } catch (err) {
+        alert('\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = '\u0e2a\u0e48\u0e07\u0e04\u0e33\u0e15\u0e2d\u0e1a'; }
+      }
+    }
+
+    // ─── Booking date range + time selects ────────────────────────────────────
+    let remainingCount = 1;
+    const today = new Date().toISOString().split('T')[0];
+    const startDateEl = document.getElementById('startDate');
+    const endDateEl   = document.getElementById('endDate');
+    startDateEl.min = today;
+    endDateEl.min   = today;
+
+    function updateBookingSummary() {
+      const s = startDateEl.value;
+      const e = endDateEl.value;
+      const summaryEl = document.getElementById('bookingSummary');
+      if (s && e && e >= s) {
+        const days = Math.ceil((new Date(e) - new Date(s)) / 864e5) + 1;
+        const price = window._pricePerDay || 0;
+        document.getElementById('summaryDays').textContent = days + ' วัน';
+        document.getElementById('summaryPpd').textContent  = price ? price.toFixed(2) + ' บาท/วัน' : '—';
+        document.getElementById('summaryTotal').textContent= price ? (days * price).toFixed(2) + ' บาท' : '—';
+        summaryEl.classList.remove('hidden');
+      } else {
+        summaryEl.classList.add('hidden');
+      }
+    }
+
+    startDateEl.addEventListener('change', () => {
+      if (endDateEl.value && endDateEl.value < startDateEl.value) endDateEl.value = startDateEl.value;
+      endDateEl.min = startDateEl.value || today;
+      updateBookingSummary();
+    });
+    endDateEl.addEventListener('change', updateBookingSummary);
+
+    function populateTimes(sel) {
+      for (let h = 6; h <= 22; h++) {
+        const hh = String(h).padStart(2,'0') + ':00';
+        const opt = document.createElement('option'); opt.value = hh; opt.textContent = hh;
+        sel.appendChild(opt);
+      }
+    }
+    populateTimes(document.getElementById('pickup'));
+    populateTimes(document.getElementById('returnt'));
+
+    const CART_KEY='notelet_cart_v1'; const HISTORY_KEY='notelet_history_v1';
+    function getCart(){ try{ return JSON.parse(localStorage.getItem(CART_KEY)||'[]'); }catch(e){ return []; } }
+    function saveCart(cart){ localStorage.setItem(CART_KEY,JSON.stringify(cart)); }
+    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch(e){ return []; } }
+    function saveHistory(h){ localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); }
+    function addCartToHistory(items){ const history=getHistory(); const now=new Date().toISOString(); (items||[]).forEach(it=>{ const source=it?.source||'rent'; history.push({...it,source,status:it?.status||'Completed',location:it?.location||'Pick up or return Location',lessor:it?.lessor||(source==='borrow'?'ComSci, KMITL':'Lessor Name'),completedAt:now}); }); saveHistory(history); }
+
+    function renderMiniCart(){
+      const popup=document.getElementById('miniCartPopup'); const itemsWrap=document.getElementById('miniCartItems'); const totalEl=document.getElementById('miniCartTotal'); const cart=getCart();
+      itemsWrap.innerHTML=''; let total=0; let hasPriced=false;
+      if(cart.length===0){ itemsWrap.innerHTML='<div class="mini-empty">Cart is empty</div>'; }
+      cart.forEach((it,idx)=>{
+        const row=document.createElement('div'); row.className='mini-item';
+        const isBorrow=(it&&(it.source==='borrow'));
+        const priceDisplay=(!isBorrow&&typeof it.total==='number')?(it.total.toFixed(2)+' Baht'):(!isBorrow?escapeHtml(it.price||''):'');
+        let metaText=''; try{ const dates=(it.date||'').split(' - ').map(s=>s.trim()).filter(Boolean); if(dates.length===1){metaText=`${dates[0]} ${it.pickup||''} - ${it.returnt||''}`;}else if(dates.length>=2){metaText=`${dates[0]} ${it.pickup||''} - ${dates[1]} ${it.returnt||''}`;}else{metaText=`${it.pickup||''} - ${it.returnt||''}`;} }catch(e){ metaText=`${escapeHtml(it.date||'')} ${escapeHtml(it.pickup||'')}`; }
+        const priceHtml=priceDisplay?(priceDisplay+' '):'';
+        row.innerHTML=`<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(metaText)}</div></div><div class="mini-item-right">${priceHtml}<button class="mini-delete" data-idx="${idx}" aria-label="Delete">Delete</button></div>`;
+        itemsWrap.appendChild(row);
+        if(!isBorrow){ hasPriced=true; total+=(typeof it.total==='number')?it.total:(parseFloat(String(it.price||0).replace(/[^0-9\.]/g,''))||0); }
+      });
+      totalEl.textContent=(cart.length&&hasPriced)?('Total '+total.toFixed(2)+' Baht'):'';
+      itemsWrap.querySelectorAll('.mini-delete').forEach(btn=>{ btn.addEventListener('click',()=>{ const i=parseInt(btn.getAttribute('data-idx'),10); const c=getCart(); if(!isNaN(i)&&i>=0&&i<c.length){ const removed=c.splice(i,1)[0]; saveCart(c); try{ if(removed&&String(removed.id)===String(id)){ remainingCount=Math.min(remainingCount+1,9999); document.getElementById('remaining').textContent='Remaining '+remainingCount; } }catch(e){} renderMiniCart(); const newCart=getCart(); if(Array.isArray(newCart)&&newCart.length===0) showMiniCartAtAnchor(false); } }); });
+    }
+    function showMiniCartAtAnchor(show){ const popup=document.getElementById('miniCartPopup'); const anchor=document.getElementById('headerCartBtn'); if(!popup||!anchor) return; if(show){ renderMiniCart(); const rect=anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left=(rect.left)+'px'; popup.style.top=(rect.bottom+8+window.scrollY)+'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); } }
+    document.getElementById('miniCartClose').addEventListener('click',()=>showMiniCartAtAnchor(false));
+    document.addEventListener('click',(e)=>{ const popup=document.getElementById('miniCartPopup'); if(!popup.contains(e.target)&&e.target.id!=='headerCartBtn'&&!e.target.closest('#miniCartPopup')) showMiniCartAtAnchor(false); });
+    document.addEventListener('click',(e)=>{ const favPopup=document.getElementById('miniFavPopup'); if(favPopup&&!favPopup.contains(e.target)&&e.target.id!=='headerFavBtn'&&!e.target.closest('#miniFavPopup')) showMiniFavAtAnchor(false); });
+    document.getElementById('miniCartCheckout').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); if(!dlg) return; dlg.classList.remove('hidden'); dlg.setAttribute('aria-hidden','false'); });
+    document.getElementById('confirmClose').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
+    document.getElementById('confirmNo').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
+    document.getElementById('confirmYes').addEventListener('click',()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); const cart=getCart(); addCartToHistory(cart); saveCart([]); renderMiniCart(); showMiniCartAtAnchor(false); alert('Checkout complete (demo)'); });
+
+    function repositionPopups(){ try{ const cp=document.getElementById('miniCartPopup'); if(cp&&!cp.classList.contains('hidden')) showMiniCartAtAnchor(true); }catch(e){} }
+    window.addEventListener('scroll',repositionPopups); window.addEventListener('resize',repositionPopups);
+
+    // ─── Chat popup helpers ────────────────────────────────────────────────
+    const API_BASE = 'http://localhost:3001';
+    let _chatRoomName = null;
+
+    function openChatPopup(room, dName) {
+      const pickup  = document.getElementById('pickup')?.value  || '';
+      const returnt = document.getElementById('returnt')?.value || '';
+      const ppd     = window._pricePerDay || 0;
+      const days    = (startDateEl.value && endDateEl.value)
+        ? Math.ceil((new Date(endDateEl.value) - new Date(startDateEl.value)) / 864e5) + 1 : 0;
+      const total   = days > 0 ? (days * ppd).toFixed(2) : '0';
+      const chatUrl = '/features/chat/rental-chat.html' +
+        '?deviceId='    + encodeURIComponent(id || '') +
+        '&room='        + encodeURIComponent(room) +
+        '&deviceName='  + encodeURIComponent(dName || '') +
+        '&pricePerDay=' + encodeURIComponent(ppd) +
+        '&totalPrice='  + encodeURIComponent(total) +
+        '&skipModal=1' +
+        (startDateEl.value ? '&startDate=' + encodeURIComponent(startDateEl.value) : '') +
+        (endDateEl.value   ? '&endDate='   + encodeURIComponent(endDateEl.value)   : '') +
+        (pickup  ? '&pickup='  + encodeURIComponent(pickup)  : '') +
+        (returnt ? '&returnt=' + encodeURIComponent(returnt) : '');
+      window.open(chatUrl, '_blank');
+    }
+
+    
+    // Restore chat button on page load if user already opened chat for this device
+    if (id) {
+      try {
+        const stored = localStorage.getItem('chat_room_' + id);
+        if (stored) {
+          const c = JSON.parse(stored);
+          if (c && c.roomName) showChatBubble(c.roomName, c.deviceName || '');
+        }
+      } catch (_) {}
+    }
+
+    // ─── Send Rental Request & Open Chat ──────────────────────────────────────
+    document.getElementById('addCartBtn').addEventListener('click', async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        window.location.href = '/features/auth/login.html?next=' + encodeURIComponent(location.href);
+        return;
+      }
+
+      // Block admin users from borrowing/renting
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+        if (payload.is_admin) {
+          alert('🛡️ บัญชี Admin ไม่สามารถยืม/เช่าอุปกรณ์ได้');
+          return;
+        }
+      } catch(_) {}
+      const start = startDateEl.value;
+      const end   = endDateEl.value;
+      if (!start)              { alert('กรุณาเลือกวันเริ่มต้น'); return; }
+      if (!end || end < start) { alert('กรุณาเลือกวันสิ้นสุดที่ถูกต้อง'); return; }
+
+      const btn = document.getElementById('addCartBtn');
+      btn.disabled = true;
+      const origText = btn.textContent;
+      btn.textContent = 'กำลังดำเนินการ...';
+
+      const dName = document.getElementById('deviceName')?.textContent || '';
+      const pricePerDay = window._pricePerDay || 0;
+      const days = Math.ceil((new Date(end) - new Date(start)) / 864e5) + 1;
+
+      try {
+        // 1. Submit rental request to backend
+        const pickupTime  = document.getElementById('pickup')?.value  || '';
+        const returnTime  = document.getElementById('returnt')?.value || '';
+        const totalPrice  = (window._pricePerDay || 0) * days;
+
+        const rentalRes = await fetch(API_BASE + '/api/rental-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({
+            deviceNo:   parseInt(id, 10),
+            startDate:  start,
+            endDate:    end,
+            totalPrice: totalPrice,
+            note:       '',
+            pickupTime: pickupTime,
+            returnTime: returnTime
+          })
+        });
+
+        if (!rentalRes.ok) {
+          const rd = await rentalRes.json().catch(() => ({}));
+          // If the user already has a pending request, just open chat (don't block)
+          if (!(rentalRes.status === 400 && rd.message && rd.message.includes('already have a pending'))) {
+            alert('ไม่สามารถส่งคำขอได้: ' + (rd.message || 'กรุณาลองใหม่'));
+            btn.textContent = origText;
+            btn.disabled = false;
+            return;
+          }
+        }
+
+        // 2. Ensure private chat room exists for this renter + device
+        const roomRes = await fetch(API_BASE + '/api/chat/device-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ deviceId: parseInt(id, 10) })
+        });
+
+        let room = 'dev-' + id;
+        if (roomRes.ok) {
+          const rd = await roomRes.json();
+          room = rd.roomName || room;
+        }
+
+        // 3. Store for future re-entry
+        localStorage.setItem('chat_room_' + id, JSON.stringify({ roomName: room, deviceName: dName, deviceId: id }));
+
+        // 4. Open chat popup
+        openChatPopup(room, dName);
+
+        // 5. Show bubble for returning to chat
+        showChatBubble(room, dName);
+        btn.textContent = '&#x1F4AC; แชทกับผู้ปล่อยเช่า';
+
+        // 6. Show success toast with link to history
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);display:flex;align-items:center;gap:12px;';
+        toast.innerHTML = '✅ ส่งคำขอสำเร็จ! <a href="/features/devices/devicehistory.html" style="color:#fff;text-decoration:underline;">ดูประวัติการยืม →</a>';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 6000);
+
+      } catch (e) {
+        alert('เกิดข้อผิดพลาด: ' + e.message);
+        btn.textContent = origText;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    document.getElementById('headerCartBtn')&&document.getElementById('headerCartBtn').addEventListener('click',(e)=>{ e.preventDefault(); const popup=document.getElementById('miniCartPopup'); const isHidden=popup.classList.contains('hidden'); showMiniCartAtAnchor(isHidden); });
+
+    function reviewKeyFor(item, idx){ const name=item.querySelector('strong')?.textContent||'r'+idx; const txt=(item.querySelector('.review-text')||item.querySelector('.entry-text'))?.textContent||''; try{ return 'review_vote_'+btoa(unescape(encodeURIComponent(name+'|'+txt))).slice(0,32); }catch(e){ return 'review_vote_'+idx; } }
+    function setupReviewToggle(item, idx){
+      const likeBtn=item.querySelector('.like,.thumb-like'); const dislikeBtn=item.querySelector('.dislike,.thumb-dislike');
+      const likeCountEl=item.querySelector('.count-like'); const dislikeCountEl=item.querySelector('.count-dislike');
+      const key=reviewKeyFor(item,idx); const cur=localStorage.getItem(key);
+      if(cur==='like') likeBtn&&likeBtn.classList.add('active');
+      if(cur==='dislike') dislikeBtn&&dislikeBtn.classList.add('active');
+      likeBtn&&likeBtn.addEventListener('click',()=>{ const now=localStorage.getItem(key); if(now==='like'){ localStorage.removeItem(key); likeBtn.classList.remove('active'); if(likeCountEl) likeCountEl.textContent=String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1)); } else { localStorage.setItem(key,'like'); likeBtn.classList.add('active'); if(likeCountEl) likeCountEl.textContent=String(parseInt(likeCountEl.textContent||'0',10)+1); if(now==='dislike'){ if(dislikeCountEl) dislikeCountEl.textContent=String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1)); dislikeBtn&&dislikeBtn.classList.remove('active'); } } });
+      dislikeBtn&&dislikeBtn.addEventListener('click',()=>{ const now=localStorage.getItem(key); if(now==='dislike'){ localStorage.removeItem(key); dislikeBtn.classList.remove('active'); if(dislikeCountEl) dislikeCountEl.textContent=String(Math.max(0,parseInt(dislikeCountEl.textContent||'0',10)-1)); } else { localStorage.setItem(key,'dislike'); dislikeBtn.classList.add('active'); if(dislikeCountEl) dislikeCountEl.textContent=String(parseInt(dislikeCountEl.textContent||'0',10)+1); if(now==='like'){ if(likeCountEl) likeCountEl.textContent=String(Math.max(0,parseInt(likeCountEl.textContent||'0',10)-1)); likeBtn&&likeBtn.classList.remove('active'); } } });
+    }
+
+    // ─── Lightbox ────────────────────────────────────────────────────────────────
+    let _lbUrls = [], _lbIdx = 0;
+    function openLightbox(urls, idx) {
+      _lbUrls = urls || []; _lbIdx = Math.max(0, Math.min(idx || 0, _lbUrls.length - 1));
+      renderLightbox();
+      document.getElementById('lightbox').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeLightbox() {
+      document.getElementById('lightbox').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    function renderLightbox() {
+      const img  = document.getElementById('lightboxImg');
+      const ctr  = document.getElementById('lightboxCounter');
+      const prev = document.getElementById('lightboxPrev');
+      const next = document.getElementById('lightboxNext');
+      img.src = _lbUrls[_lbIdx] || '';
+      const many = _lbUrls.length > 1;
+      ctr.textContent = many ? (_lbIdx + 1) + ' / ' + _lbUrls.length : '';
+      prev.style.display = many ? '' : 'none';
+      next.style.display = many ? '' : 'none';
+    }
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') closeLightbox(); });
+    document.getElementById('lightboxPrev').addEventListener('click', () => { _lbIdx = (_lbIdx - 1 + _lbUrls.length) % _lbUrls.length; renderLightbox(); });
+    document.getElementById('lightboxNext').addEventListener('click', () => { _lbIdx = (_lbIdx + 1) % _lbUrls.length; renderLightbox(); });
+    document.addEventListener('keydown', (e) => {
+      if (!document.getElementById('lightbox').classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft')  { _lbIdx = (_lbIdx - 1 + _lbUrls.length) % _lbUrls.length; renderLightbox(); }
+      if (e.key === 'ArrowRight') { _lbIdx = (_lbIdx + 1) % _lbUrls.length; renderLightbox(); }
+    });
+
+    // ─── Boot ────────────────────────────────────────────────────────────────────
+    if (!id) { showNoDeviceState(); } else { (async () => { await loadDevice(); loadReviews(); })(); }
+  </script>
+
+
+</body>
+</html>

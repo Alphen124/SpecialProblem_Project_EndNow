@@ -1,0 +1,330 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Give out</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+  <style>
+    /* Department cards: blue background + white text (match screenshot) */
+    .rentout-card.borrow-card{ box-shadow:0px 4px 4px rgba(0,0,0,0.25); }
+    .rentout-card.borrow-card .card-content{ background:var(--primary); border-bottom-left-radius:12px; border-bottom-right-radius:12px; }
+    .rentout-card.borrow-card .device-name,
+    .rentout-card.borrow-card .meta.small,
+    .rentout-card.borrow-card .lessee-name{ color:#fff; }
+    .rentout-card.borrow-card .card-divider{ background:rgba(255,255,255,0.35); }
+    .rentout-card.borrow-card .badge{ background:rgba(255,255,255,0.18); color:#fff; }
+    .rentout-card.borrow-card .avatar{ background:transparent; border:6px solid #fff; box-shadow:none; }
+
+    /* lighter blue confirm button near Status (Give out only) */
+    .rentout-card.borrow-card .btn-confirm{
+      background:#C4DEFD;
+      color:var(--blue);
+    }
+
+    .rentout-head.centered .add-device-wrap{ margin-top:14px; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/">หน้าแรก</a>
+        <a href="/features/devices/devices.html">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html" class="active">จัดการอุปกรณ์</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="rentout-page">
+    <div class="container">
+      <section class="rentout-head centered">
+        <h1>Department’s Device</h1>
+        <div class="add-device-wrap">
+          <button id="openAddGive" class="btn btn-cta" type="button">Add Device</button>
+        </div>
+      </section>
+
+      <section class="rentout-list">
+        <div class="rentout-cards three-up" id="giveoutCards">
+          <article class="rentout-card borrow-card" data-id="1" data-status="requested" data-lessee="ComSci, KMITL">
+            <div class="card-media-large" aria-hidden style="background:#C4DEFD;"></div>
+            <div class="card-content">
+              <h3 class="device-name">MacBook Pro 13"</h3>
+              <div class="meta small">Borrowing Duration · 3 days</div>
+              <div class="meta small status-row">Status · <span class="badge badge-active">Requested</span> <button class="btn btn-confirm" data-id="1">Confirm</button></div>
+              <div class="meta small">Pick up · 2026-01-10</div>
+              <div class="meta small">Return · 2026-01-13</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+                  <div class="lessee-name">ComSci, KMITL</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="rentout-card borrow-card" data-id="2" data-status="returned" data-lessee="ComSci, KMITL">
+            <div class="card-media-large" aria-hidden style="background:#C4DEFD;"></div>
+            <div class="card-content">
+              <h3 class="device-name">Nikon D3500</h3>
+              <div class="meta small">Borrowing Duration · 7 days</div>
+              <div class="meta small">Status · <span class="badge badge-returned">Returned</span></div>
+              <div class="meta small">Pick up · 2025-12-20</div>
+              <div class="meta small">Return · 2025-12-27</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+                  <div class="lessee-name">ComSci, KMITL</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="rentout-card borrow-card" data-id="3" data-status="returned" data-lessee="ComSci, KMITL">
+            <div class="card-media-large" aria-hidden style="background:#C4DEFD;"></div>
+            <div class="card-content">
+              <h3 class="device-name">Dell XPS 13</h3>
+              <div class="meta small">Borrowing Duration · 5 days</div>
+              <div class="meta small">Status · <span class="badge badge-returned">Returned</span></div>
+              <div class="meta small">Pick up · 2026-02-01</div>
+              <div class="meta small">Return · 2026-02-06</div>
+
+              <div class="card-divider"></div>
+
+              <div class="card-footer">
+                <div class="avatar" aria-hidden></div>
+                <div class="lessee">
+                  <div class="lessee-name">ComSci, KMITL</div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Confirm Modal for requested items -->
+  <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <button class="modal-close" id="closeConfirm" aria-label="Close">&times;</button>
+      <h3 id="confirmTitle">Confirm Request</h3>
+      <p id="confirmMessage">Confirm request for <strong id="confirmDevice"></strong> to <strong id="confirmLessee"></strong>?</p>
+      <div class="modal-actions">
+        <button id="confirmAccept" class="btn btn-cta" type="button">Confirm</button>
+        <button id="confirmCancel" class="btn btn-outline" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Device Modal (same UI as rentout page) -->
+  <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="closeModal" aria-label="Close">&times;</button>
+      <h2 id="modalTitle" class="modal-title">Add Device</h2>
+      <form id="addRentForm" class="modal-form" autocomplete="off">
+        <div class="form-row">
+          <label for="deviceName">Device Name</label>
+          <input id="deviceName" name="deviceName" type="text" required placeholder="e.g. MacBook Pro 13&quot;">
+        </div>
+
+        <div class="form-row">
+          <label for="deviceType">Device Type</label>
+          <select id="deviceType" name="deviceType" required>
+            <option value="">Select type</option>
+            <option>Laptop</option>
+            <option>Tablet</option>
+            <option>Others</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="4" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="imageUpload">Upload Image</label>
+          <input id="imageUpload" name="image" type="file" accept="image/*">
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-cta">Confirm</button>
+          <button type="button" id="cancelModal" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script src="/js/navpopups.js"></script>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+
+  <script>
+    // ---- Add Device modal logic (same behavior as rentout page) ----
+    (function(){
+      const openBtn = document.getElementById('openAddGive');
+      const overlay = document.getElementById('modalOverlay');
+      const closeBtn = document.getElementById('closeModal');
+      const cancelBtn = document.getElementById('cancelModal');
+      const form = document.getElementById('addRentForm');
+      const grid = document.getElementById('giveoutCards');
+
+      function openModal(){
+        overlay && overlay.setAttribute('aria-hidden','false');
+        overlay && overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+        const nameEl = document.getElementById('deviceName');
+        nameEl && nameEl.focus();
+      }
+
+      function closeModal(){
+        overlay && overlay.setAttribute('aria-hidden','true');
+        overlay && overlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      function escapeHtml(s){
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      openBtn && openBtn.addEventListener('click', openModal);
+      closeBtn && closeBtn.addEventListener('click', closeModal);
+      cancelBtn && cancelBtn.addEventListener('click', closeModal);
+      overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+
+      form && form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        if(!grid) return closeModal();
+
+        const deviceName = (form.deviceName && form.deviceName.value || '').trim();
+        if(!deviceName) return;
+
+        const nextId = String(Date.now());
+        const card = document.createElement('article');
+        card.className = 'rentout-card borrow-card';
+        card.setAttribute('data-id', nextId);
+        card.setAttribute('data-status', 'requested');
+        card.setAttribute('data-lessee', 'ComSci, KMITL');
+
+        card.innerHTML = `
+          <div class="card-media-large" aria-hidden style="background:#C4DEFD;"></div>
+          <div class="card-content">
+            <h3 class="device-name">${escapeHtml(deviceName)}</h3>
+            <div class="meta small">Borrowing Duration</div>
+            <div class="meta small status-row">Status · <span class="badge badge-active">Requested</span> <button class="btn btn-confirm" data-id="${escapeHtml(nextId)}">Confirm</button></div>
+            <div class="meta small">Pick up or return time</div>
+            <div class="meta small">Pick up or return Location</div>
+
+            <div class="card-divider"></div>
+
+            <div class="card-footer">
+              <div class="avatar" aria-hidden></div>
+              <div class="lessee">
+                <div class="lessee-name">ComSci, KMITL</div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        grid.insertBefore(card, grid.firstChild);
+        closeModal();
+        form.reset();
+      });
+    })();
+
+    // ---- Confirm modal logic for requested items (Requested -> Borrowed) ----
+    (function(){
+      const confirmOverlay = document.getElementById('confirmOverlay');
+      const closeConfirm = document.getElementById('closeConfirm');
+      const confirmDevice = document.getElementById('confirmDevice');
+      const confirmLessee = document.getElementById('confirmLessee');
+      const confirmAccept = document.getElementById('confirmAccept');
+      const confirmCancel = document.getElementById('confirmCancel');
+      let currentConfirmCard = null;
+
+      function openConfirmModal(card){
+        currentConfirmCard = card;
+        const device = card.querySelector('.device-name')?.textContent || '';
+        const lessee = card.dataset.lessee || card.querySelector('.lessee-name')?.textContent || '';
+        if(confirmDevice) confirmDevice.textContent = device;
+        if(confirmLessee) confirmLessee.textContent = lessee;
+        confirmOverlay && confirmOverlay.classList.add('open');
+        confirmOverlay && confirmOverlay.setAttribute('aria-hidden','false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeConfirmModal(){
+        confirmOverlay && confirmOverlay.classList.remove('open');
+        confirmOverlay && confirmOverlay.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+        currentConfirmCard = null;
+      }
+
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.btn-confirm');
+        if(!btn) return;
+        const card = btn.closest('.rentout-card');
+        if(!card) return;
+        openConfirmModal(card);
+      });
+
+      closeConfirm && closeConfirm.addEventListener('click', closeConfirmModal);
+      confirmCancel && confirmCancel.addEventListener('click', closeConfirmModal);
+      confirmOverlay && confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) closeConfirmModal(); });
+
+      confirmAccept && confirmAccept.addEventListener('click', ()=>{
+        if(!currentConfirmCard) return closeConfirmModal();
+        currentConfirmCard.dataset.status = 'borrowed';
+        const badge = currentConfirmCard.querySelector('.badge');
+        if(badge){
+          badge.className = 'badge badge-rented';
+          badge.textContent = 'Borrowed';
+        }
+        const cbtn = currentConfirmCard.querySelector('.btn-confirm');
+        if(cbtn) cbtn.remove();
+        closeConfirmModal();
+      });
+    })();
+  </script>
+</body>
+</html>

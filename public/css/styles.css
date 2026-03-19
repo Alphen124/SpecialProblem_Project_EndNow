@@ -1,0 +1,802 @@
+/* User popup card styles */
+.user-popup-card {
+  position: absolute;
+  right: 0;
+  top: 54px;
+  min-width: 220px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(4,56,115,0.13), 0 1.5px 6px rgba(0,0,0,0.07);
+  padding: 24px 20px 16px 20px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeInPop .18s cubic-bezier(.4,0,.2,1);
+}
+.user-popup-card.hidden {
+  display: none;
+}
+.user-popup-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4F9CF9 60%, #FFE492 100%);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(4,56,115,0.10);
+}
+.user-popup-name {
+  font-weight: 600;
+  color: #043873;
+  margin-bottom: 14px;
+  font-size: 1.08rem;
+}
+.user-popup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.user-popup-actions a {
+  text-decoration: none;
+  color: #4F9CF9;
+  font-weight: 500;
+  padding: 8px 0;
+  border-radius: 8px;
+  text-align: center;
+  transition: background 0.13s;
+}
+.user-popup-actions a:hover {
+  background: #f2f7ff;
+}
+@keyframes fadeInPop {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* End user popup card styles */
+:root{
+  --blue:#043873;
+  --accent:#FFE492;
+  --primary:#4F9CF9;
+  --bg:#FFFFFF;
+  --max-width:1200px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%}
+body{
+  font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  background:var(--bg);
+  color:#111;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.4;
+}
+.container{
+  width:100%;
+  max-width:var(--max-width);
+  margin:0 auto;
+  padding:0 1.25rem;
+}
+
+/* header */
+.site-header{
+  background:var(--blue);
+  color:#fff;
+  position:sticky;
+  top:0;
+  z-index:50;
+  box-shadow:0 2px 8px rgba(2,10,22,0.15);
+}
+.header-inner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:72px;
+}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.logo-mark{
+  width:52px;
+  height:52px;
+  background-color:transparent;
+  border-radius:0;
+  box-shadow:none;
+  background-image:url('/logo.png');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+}
+.logo-text{font-weight:700;font-size:20px;letter-spacing:0.6px}
+.nav{display:flex;gap:20px;align-items:center}
+.nav a{color:#fff;text-decoration:none;font-weight:500;opacity:0.95}
+.nav a:hover,.nav a.active{color:#FFE492;opacity:1}
+.header-actions{display:flex;gap:12px;align-items:center}
+.header-actions .btn-login{background:#c97c2c;color:#fff;padding:9px 24px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none;transition:background .2s}
+.header-actions .btn-login:hover{background:#b06920}
+.btn{border:0;padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:500}
+.btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.12)}
+.btn-primary{background:var(--accent);color:var(--blue)}
+
+/* hero (dark) */
+.hero{
+  background: linear-gradient(180deg,var(--blue) 0%, #07548f 100%);
+  color:#fff;
+  padding:64px 0;
+  min-height: calc(100vh - 72px);
+  display:flex;
+  align-items:center;
+  position:relative;
+  overflow:hidden;
+}
+.hero::after{
+  content:"";
+  position:absolute;
+  right:-15%;
+  top:-10%;
+  width:60vmax;
+  height:60vmax;
+  background: radial-gradient(circle at 30% 30%, rgba(255,228,146,0.45), transparent 35%);
+  transform:rotate(10deg);
+  pointer-events:none;
+  filter:blur(20px);
+  z-index:0;
+}
+.hero-inner{
+  display:flex;
+  gap:48px;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  z-index:1;
+}
+.hero-copy{flex:1;max-width:640px}
+.hero-title{
+  font-size:clamp(32px,5.5vw,64px);
+  line-height:0.98;
+  margin-bottom:18px;
+  font-weight:700;
+}
+.hero-sub{font-size:clamp(14px,1.6vw,18px);opacity:0.95;margin-bottom:24px}
+.hero-cta{display:flex;gap:12px}
+.btn-cta{
+  background:var(--primary);
+  color:#fff;
+  padding:14px 20px;
+  border-radius:10px;
+  text-decoration:none;
+  display:inline-block;
+  font-weight:600;
+}
+.btn-outline{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.18);
+  color:#fff;
+  padding:12px 18px;
+  border-radius:8px;
+  text-decoration:none;
+}
+.hero-visual{
+  width:460px;
+  height:320px;
+  background:linear-gradient(135deg,#c4defd 0%, #eaf6ff 100%);
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(2,6,23,0.25);
+  flex-shrink:0;
+}
+
+/* alternate section (white) */
+.section-alt{
+  background:#fff;
+  color:#1E1E1E;
+  padding:64px 0;                 /* match hero padding */
+  min-height: calc(100vh - 72px); /* same height as hero */
+  position:relative;
+  padding-bottom:120px;          /* space for merged footer */
+  display:flex;
+  align-items:center;            /* vertically center the inner content */
+}
+.section-alt .hero-inner{
+  display:flex;
+  gap:48px;
+  align-items:center;
+  justify-content:space-between; /* place copy left and visual right, centered within container */
+  width:100%;
+  z-index:1;
+}
+.alt-title{
+  font-size:clamp(28px,4.4vw,56px);
+  line-height:1.03;
+  margin-bottom:16px;
+  font-weight:700;
+  color:#111;
+}
+.alt-sub{font-size:16px;color:#666;margin-bottom:24px}
+
+/* make the borrow visual exactly the same as renting visual */
+.hero-visual.alt{
+  width:460px; /* same as .hero-visual */
+  height:320px; /* same as .hero-visual */
+  background:linear-gradient(135deg,#c4defd 0%, #eaf6ff 100%);
+  border-radius:18px;
+  box-shadow:0 12px 30px rgba(2,6,23,0.25);
+  flex-shrink:0;
+  z-index:1;
+}
+
+/* merged footer styling */
+.merged-footer{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:24px;
+  color:#666;
+  font-size:14px;
+  text-align:center;
+  width:100%;
+  max-width:var(--max-width);
+  padding:0 1.25rem;
+}
+
+/* footer */
+.site-footer{padding:24px 0;text-align:center;color:#666;font-size:14px}
+
+/* Login page styles */
+.login-page{
+  padding:96px 0;
+  min-height:calc(100vh - 72px);
+  display:flex;
+  align-items:center;
+}
+.login-card{
+  background:#fff;
+  padding:36px;
+  border-radius:12px;
+  box-shadow:0 12px 30px rgba(2,6,23,0.06);
+  max-width:420px;
+  width:100%;
+}
+.login-head{
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:16px;
+  text-align:center; /* center the heading */
+}
+.form-row{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.form-row input{padding:12px 14px;border:1px solid #e6e9ef;border-radius:8px;font-size:15px}
+
+/* place buttons next to each other and center them */
+.login-actions{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  margin-top:6px;
+}
+
+/* ensure login + create buttons share the same font styling */
+.login-actions .btn,
+.login-actions a{
+  font-weight:600;
+}
+
+/* make login/create buttons equal size inside the login card */
+.login-card .login-actions{ width:100%; }
+.login-card .login-actions > *{
+  flex:1 1 0;
+  text-align:center;
+}
+.login-card .login-actions .btn-cta,
+.login-card .login-actions .btn-create{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  font-size:16px;
+}
+
+/* Create account button on login card: white bg + black text */
+.btn-create{
+  background:#fff;
+  color:#111;
+  border:1px solid rgba(0,0,0,0.12);
+  padding:14px 20px;
+  border-radius:10px;
+  text-decoration:none;
+  display:inline-block;
+  font-weight:600;
+}
+
+.login-admin-row{
+  display:flex;
+  justify-content:center;
+  margin-top:14px;
+}
+
+/* ghost button variant inside login card should be dark */
+.login-card .btn-ghost.login-admin{
+  color:#111;
+  border:1px solid rgba(0,0,0,0.12);
+}
+
+/* make the create-account outline dark on the white login card */
+.login-card .btn-outline{
+  background:transparent;
+  border:1px solid rgba(0,0,0,0.12);
+  color:#111;
+  padding:12px 18px;
+  border-radius:8px;
+  text-decoration:none;
+}
+
+/* Rent-out history page */
+.rentout-page{ padding:20px 0 40px; min-height: calc(100vh - 72px); background: #f9fbfd; }
+.rentout-head{ text-align:center; margin:8px 0 18px; }
+.rentout-head.centered h1{ font-size:44px; margin:8px 0 12px; color:#111; font-weight:700; }
+.add-device-wrap{ display:flex; justify-content:center; }
+.add-device-wrap .btn-cta{ padding:10px 18px; height:40px; }
+.input-search{ padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; min-width:240px; }
+.select-filter{ padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; background:#fff; }
+
+/* make the controls in the rentout header visually aligned:
+   - dropdown arrow margin aligns with text
+   - search, status dropdown and Add Rent button share same height/padding */
+.rentout-controls{
+  display:flex;
+  gap:12px;
+  align-items:center;
+}
+
+/* unify sizing for the three control types */
+.rentout-controls .input-search,
+.rentout-controls .select-filter,
+.rentout-controls .btn-cta,
+.rentout-controls .btn-outline{
+  height:44px;
+  padding:10px 16px;
+  font-size:15px;
+  line-height:1;
+  border-radius:8px;
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* FORCE hide native select arrows and use consistent custom arrow */
+.rentout-controls .select-filter,
+.modal-form select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+
+  background-color: #fff !important;
+  border: 1px solid #e6e9ef !important;
+  padding-left: 12px !important;
+  padding-right: 44px !important; /* room for arrow */
+  height: 44px !important;
+  box-sizing: border-box !important;
+
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%23334345' d='M6 8L0 0h12z'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 12px 8px !important;
+  color: #334155 !important;
+}
+
+/* hide native arrows for IE/Edge and WebKit */
+.rentout-controls .select-filter::-ms-expand,
+.modal-form select::-ms-expand {
+  display: none !important;
+}
+.rentout-controls .select-filter::-webkit-appearance,
+.modal-form select::-webkit-appearance {
+  -webkit-appearance: none !important;
+}
+
+/* fallback for any inline/native styles — force background */
+.rentout-controls .select-filter[style],
+.modal-form select[style]{
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%23334345' d='M6 8L0 0h12z'/></svg>") !important;
+  background-position: right 12px center !important;
+  background-size: 12px 8px !important;
+  padding-right:44px !important;
+}
+
+/* card/grid layout for rent-out items (replaces table) */
+.rentout-list .rentout-cards{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:36px;
+  justify-items:center;
+  align-items:start;
+}
+.rentout-card{
+  width: 360px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 30px 80px rgba(11,35,70,0.08);
+  overflow: visible;
+  display:flex;
+  flex-direction:column;
+}
+.card-media-large{
+  width:100%;
+  height:160px;
+  background: linear-gradient(180deg,#cfe8ff 0%, #eaf6ff 100%);
+  border-top-left-radius:12px;
+  border-top-right-radius:12px;
+}
+.card-content{ padding:24px; display:flex; flex-direction:column; gap:10px; }
+.device-name{ font-size:20px; font-weight:700; color:#111; margin:0; }
+.meta.small{ font-size:13px; color:#667085; }
+.card-divider{ height:1px; background:#eef2f6; margin:12px 0; }
+.card-footer{ display:flex; align-items:center; gap:12px; }
+.avatar{ width:48px; height:48px; border-radius:50%; background:#fff; border:6px solid #fff; box-shadow:0 6px 20px rgba(11,35,70,0.08); background-color:#fdeff0; }
+.lessee{ display:flex; align-items:center; gap:12px; justify-content:space-between; width:100%; }
+.lessee-name{ font-weight:600; color:#111; }
+.btn-outline{ padding:8px 12px; height:36px; }
+
+/* ensure avatars are perfectly round everywhere */
+.avatar{ border-radius:999px; overflow:hidden; flex:0 0 auto; }
+
+/* mini cart / favorites popup styles (used by navpopups.js) */
+.mini-cart{ background:transparent; z-index:9999; }
+.mini-cart .mini-cart-inner{ width:320px; box-shadow:0 6px 24px rgba(0,0,0,0.12); background:#fff; border-radius:8px; padding:12px; }
+.mini-cart .mini-cart-close{ float:right; border:0; background:transparent; font-size:20px; cursor:pointer; color:#111; }
+.mini-item{ display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid #f2f2f2; gap:10px; }
+.mini-item .mini-name{ font-weight:600; }
+.mini-meta{ font-size:12px; color:#666; }
+.mini-item-right{ display:flex; gap:10px; align-items:center; justify-content:flex-end; }
+.mini-delete,.mini-fav-delete{ background:transparent; border:0; cursor:pointer; color:#0b61d6; font-weight:600; }
+.mini-empty{ color:#666; padding:10px 6px; }
+.mini-cart-footer{ display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px; }
+.mini-cart-total{ color:#111; font-weight:600; }
+
+/* ghost buttons inside white popup should be dark */
+.mini-cart .mini-cart-inner .btn-ghost{ color:#111; border:1px solid rgba(0,0,0,0.12); }
+
+/* make Review button text visible and dark inside cards */
+.rentout-card .btn-outline{ color:#0f1724; border:1px solid #e6e9ef; background:transparent; }
+
+/* small Confirm button used next to status */
+.btn-confirm{
+  padding:6px 10px;
+  height:30px;
+  font-size:13px;
+  border-radius:8px;
+  background:var(--primary);
+  color:#fff;
+  border:0;
+  cursor:pointer;
+  margin-left:10px;
+}
+.status-row{ display:flex; align-items:center; gap:8px; }
+
+@media (max-width:1100px){
+  .rentout-list .rentout-cards{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width:720px){
+  .rentout-list .rentout-cards{ grid-template-columns: 1fr; }
+  .rentout-head.centered h1{ font-size:32px; }
+}
+
+/* ensure badges look consistent */
+.badge{ display:inline-block; padding:6px 10px; border-radius:999px; font-weight:600; font-size:13px; }
+.badge-active{ background:#e6f5ff; color:#0366a6; }
+.badge-rented{ background:#e6f5ff; color:#0366a6; }
+.badge-returned{ background:#effaf0; color:#1f8a3d; }
+.badge-late{ background:#fff5f5; color:#b91c1c; }
+/* New rental lifecycle status badges */
+.badge-pending{ background:#fef3c7; color:#92400e; }        /* amber  – waiting   */
+.badge-confirmed{ background:#dcfce7; color:#166534; }      /* green  – accepted  */
+.badge-rental-active{ background:#dbeafe; color:#1e40af; }  /* blue   – ongoing   */
+.badge-completed{ background:#f1f5f9; color:#475569; }      /* slate  – finished  */
+.badge-overdue{ background:#fff5f5; color:#b91c1c; }        /* red    – overdue   */
+
+/* Modal overlay and centered card (Add Rent) */
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(8,20,40,0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 28px;
+}
+.modal-overlay.open{ display:flex; }
+
+.modal{
+  width: 100%;
+  max-width: 640px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 30px 60px rgba(2,6,23,0.35);
+  padding: 28px;
+  position: relative;
+  color: #111;
+}
+
+/* close button */
+.modal-close{
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  color: #667085;
+}
+
+/* modal title */
+.modal-title{
+  margin: 0 0 14px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* form layout */
+.modal-form{ display:flex; flex-direction:column; gap:14px; }
+.form-row{ display:flex; flex-direction:column; gap:8px; }
+.form-row--split{ display:flex; gap:16px; }
+.form-row--split > div{ flex:1; }
+
+/* inputs */
+.modal-form input[type="text"],
+.modal-form input[type="number"],
+.modal-form select,
+.modal-form textarea,
+.modal-form input[type="file"]{
+  width:100%;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #e6e9ef;
+  background:#fff;
+  font-size:15px;
+  color:#0f1724;
+  box-sizing:border-box;
+}
+
+/* textarea slightly taller */
+.modal-form textarea{ resize:vertical; min-height:84px; }
+
+/* Review modal styles */
+.review-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(8,20,40,0.55);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:130;
+  padding:28px;
+}
+.review-overlay.open{ display:flex; }
+.review-modal{
+  width:100%;
+  max-width:720px;
+  background:#fff;
+  border-radius:8px;
+  box-shadow:0 30px 80px rgba(2,6,23,0.35);
+  padding:24px 28px;
+  position:relative;
+}
+.review-modal h3{ margin:0 0 12px; font-size:18px; }
+.review-body{ display:flex; flex-direction:column; gap:12px; }
+.review-lessee{ display:flex; align-items:center; gap:12px; }
+.review-avatar{ width:52px; height:52px; border-radius:50%; background:#fdeff0; box-shadow:0 6px 20px rgba(11,35,70,0.08); }
+.review-lessee-name{ font-weight:600; }
+.review-stars{ display:flex; gap:8px; font-size:28px; color:#f59e0b; }
+.review-stars .star{ background:none;border:none;cursor:pointer;color:rgba(0,0,0,0.12); }
+.review-stars .star.active{ color:#f59e0b; }
+
+/* Make the selectable star rating (0–5) bigger */
+#reviewStars{ gap:10px; font-size:44px; }
+#reviewStars .star{ font-size:44px; line-height:1; width:44px; height:44px; }
+.review-label{ font-weight:600; margin-top:8px; }
+.review-modal textarea{ width:100%; padding:12px; border-radius:8px; border:1px solid #e6e9ef; min-height:140px; }
+.review-modal .modal-actions{ display:flex; justify-content:center; margin-top:12px; }
+
+/* history-specific styles */
+.hidden{ display:none !important; }
+.review-history.header .review-avatar{ width:72px; height:72px; }
+.review-history .review-lessee.header{ align-items:center; gap:18px; }
+.review-list{ display:flex; flex-direction:column; gap:18px; margin-top:8px; max-height:360px; overflow:auto; padding-right:6px; }
+.review-entry{ display:flex; gap:14px; align-items:flex-start; padding:12px 6px; border-radius:8px; }
+.entry-avatar{ width:44px; height:44px; border-radius:50%; background:#fff; border:6px solid #fff; box-shadow:0 6px 18px rgba(11,35,70,0.06); background-color:#fdeff0; flex:0 0 44px; }
+.entry-body{ display:flex; flex-direction:column; gap:6px; }
+.entry-head{ display:flex; gap:10px; align-items:center; color:#334155; }
+.entry-time{ font-size:13px; color:#94a3b8; }
+.entry-stars{ color:#f59e0b; font-size:14px; }
+.entry-text{ color:#0f1724; font-size:15px; max-width:680px; }
+.entry-actions{ display:flex; gap:8px; align-items:center; color:#94a3b8; font-size:13px; }
+
+/* Thumb up/down buttons: match rentdevice like/dislike styling */
+.thumb-like, .thumb-dislike{
+  background:#fff;
+  border:1px solid #eee;
+  padding:6px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  color:#0f1724;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.thumb-like:hover, .thumb-dislike:hover{ background:#f7f7f7; }
+.thumb-like.active, .thumb-dislike.active{ background:#e6f7ff; border-color:#60a5fa; color:#0b61d6; }
+.linkish{ background:none;border:none;color:#a3b1c6;cursor:pointer;padding:0;font-weight:600 }
+.muted{ color:#94a3b8; margin-left:6px }
+
+/* larger review modal to match design */
+.review-modal{ max-width:1042px; width:100%; padding:36px; border-radius:10px; }
+.review-modal .modal-actions{ justify-content:flex-end }
+.history-actions{ justify-content:flex-end }
+
+
+/* modal actions */
+.modal-actions{ display:flex; gap:12px; justify-content:flex-end; margin-top:6px; }
+
+/* make form buttons same height as header controls */
+.modal .btn{
+  padding:10px 18px;
+  height:44px;
+  font-size:15px;
+  min-width:110px;
+}
+
+/* outline variant inside modal */
+.modal .btn-outline{ background:transparent; border:1px solid #e6e9ef; color:#334155; }
+
+/* responsive */
+@media (max-width:720px){
+  .modal{ padding:18px; max-width:520px; }
+  .form-row--split{ flex-direction:column; }
+  .modal .btn{ width:100%; }
+  .modal-actions{ flex-direction:column-reverse; gap:8px; }
+}
+@media (max-width:980px){
+  .rentout-list .rentout-cards{ grid-template-columns: 1fr; }
+  .card-media{ width:120px; height:74px; }
+}
+@media (max-width:920px){
+  .hero-inner{flex-direction:column;align-items:flex-start}
+  .hero-visual{width:100%;height:220px;margin-top:18px}
+  .hero-visual.alt{height:220px}
+  .nav{display:none}
+  .header-actions{gap:8px}
+
+  /* keep footer inline on small screens */
+  .merged-footer{
+    position:static;
+    transform:none;
+    margin-top:28px;
+    text-align:left;
+    padding-left:0;
+  }
+}
+@media (max-width:480px){
+  .header-inner{height:64px;padding:0 12px}
+  .logo-text{font-size:18px}
+  .logo-mark{ width:44px; height:44px; }
+  .hero{padding:40px 0;min-height:calc(100vh - 64px)}
+  .hero-title{font-size:28px}
+  .alt-title{font-size:28px}
+}
+@media (max-width:980px){
+  .table{ min-width:700px; }
+  .rentout-head{ flex-direction:column; align-items:flex-start; gap:12px; }
+  .rentout-controls{ width:100%; justify-content:flex-start; flex-wrap:wrap; }
+}
+@media (max-width:640px){
+  .table{ min-width:600px; }
+  .input-search{ min-width:140px; }
+}
+
+/* make outline buttons in the borrow (section-alt) area dark */
+.section-alt .btn-outline{
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.12);
+  color: #111;               /* black text */
+  padding: 12px 18px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+/* Rent type page tweaks: pull content up and center */
+.renttype-page{ padding:20px 0 60px; min-height: calc(100vh - 72px); display:flex; align-items:flex-start; justify-content:center; }
+.renttype-page .container{ padding-top:6px; }
+.renttype-grid{ display:flex; gap:48px; justify-content:center; align-items:flex-start; }
+.renttype-card{ width:320px; }
+.renttype-cta{ margin-top:18px; display:flex; gap:12px; justify-content:center; }
+
+/* Filters (shown on search results only) */
+.result-filters{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  margin:6px 0 18px;
+  width:100%;
+}
+.filter-select{
+  height:44px;
+  padding:10px 44px 10px 16px;
+  border:1px solid #e6e9ef;
+  border-radius:10px;
+  background:#fff;
+  color:#111;
+  font-size:15px;
+  text-align:left;
+  text-align-last:left;
+  box-sizing:border-box;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'><path fill='%23334345' d='M6 8L0 0h12z'/></svg>");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:12px 8px;
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+
+/* Visual style for renttype cards to match provided screenshot */
+.renttype-card{
+  width:360px;
+  background:#fff;
+  border-radius:12px;
+  padding:28px 24px 30px;
+  box-shadow: 0 40px 120px rgba(11,35,70,0.06);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.renttype-visual{
+  width:300px;
+  height:300px;
+  background:#cfe8ff;
+  border-radius:8px;
+  margin-bottom:22px;
+}
+.renttype-label{
+  text-align:center;
+  font-weight:600;
+  color:#111;
+  margin-top:6px;
+}
+
+/* Search/result cards — white background (replace previous blue variant) */
+.result-card{
+  width:360px;
+  background:#fff;
+  border-radius:12px;
+  padding:0;
+  box-shadow: 0 30px 80px rgba(11,35,70,0.06);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  margin:0 12px;
+}
+.result-card .card-media-large{ height:180px; background: linear-gradient(180deg,#eaf6ff 0%, #f7fbff 100%); }
+.result-card .card-content{ padding:20px; }
+
+/* Header search box */
+.header-search{ display:flex; gap:8px; align-items:center; margin-left:12px; }
+.header-search input{ padding:8px 10px; border-radius:8px; border:1px solid #e6e9ef; width:280px; }
+.header-search .btn-cta{ padding:8px 12px; height:36px; }
+.nav a#navSearchBtn{ cursor:pointer; }
+
+/* header layout adjustments: ensure header-search sits between logo and nav */
+.header-inner{ display:flex; align-items:center; gap:12px; }
+.header-inner .logo{ flex:0 0 auto }
+.header-inner .header-search{ flex:0 0 auto }
+.header-inner .nav{ margin-left:auto; }
+.header-actions{ margin-left:12px }

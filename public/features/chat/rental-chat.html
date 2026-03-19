@@ -1,0 +1,1824 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notelet — เจรจาเช่าอุปกรณ์</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat-notifications.js"></script>
+  <style>
+/* ─── Reset ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:    #043873;
+  --navy2:   #0a5ba8;
+  --blue:    #4F9CF9;
+  --amber:   #c97c2c;
+  --green:   #22c55e;
+  --red:     #ef4444;
+  --yellow:  #f59e0b;
+  --text:    #1e2d4a;
+  --muted:   #6b7280;
+  --surface: rgba(255 255 255 / 0.97);
+  --border:  rgba(4 56 115 / 0.12);
+  --radius:  16px;
+  --shadow:  0 20px 48px rgba(0 0 0 / 0.18);
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── Date Picker Modal ───────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0 0 0 / 0.6);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 900;
+  animation: fadeIn .2s ease;
+}
+.modal-backdrop.hidden { display: none; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes popIn { from { opacity: 0; transform: scale(.88); } to { opacity: 1; transform: scale(1); } }
+
+.modal-card {
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 36px 40px;
+  max-width: 460px; width: calc(100% - 40px);
+  box-shadow: var(--shadow);
+  animation: slideUp .28s cubic-bezier(.34,1.56,.64,1);
+}
+.modal-card h2 { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.modal-card .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+
+.field-group { display: flex; flex-direction: column; gap: 14px; margin-bottom: 22px; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.field input[type="date"] {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; color: var(--text);
+  outline: none; transition: border-color .2s, box-shadow .2s;
+  background: rgba(4 56 115 / 0.03);
+}
+.field input[type="date"]:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(4 56 115 / 0.1); }
+
+.modal-price-preview {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(4 56 115 / 0.05);
+  border: 1.5px solid rgba(4 56 115 / 0.1);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+}
+.modal-price-preview .label { font-size: 13px; color: var(--muted); }
+.modal-price-preview .value { font-size: 18px; font-weight: 700; color: var(--navy); }
+
+.modal-actions { display: flex; gap: 10px; }
+.btn {
+  flex: 1; padding: 13px; border-radius: 12px; font-size: 15px; font-weight: 600;
+  cursor: pointer; border: none; transition: opacity .2s, transform .12s;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.btn:hover { opacity: .88; transform: translateY(-1px); }
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+.btn-primary { background: linear-gradient(135deg, var(--navy), var(--navy2)); color: #fff; box-shadow: 0 4px 16px rgba(4 56 115 / 0.35); }
+.btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+
+/* ─── Shell ───────────────────────────────────────────────────── */
+.shell {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  height: 100vh;
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 16px;
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 260px 1fr; }
+  .right-panel { display: none; }
+}
+@media (max-width: 720px) {
+  .shell { grid-template-columns: 1fr; padding: 8px; gap: 8px; height: auto; min-height: 100vh; overflow: auto; }
+  .left-panel { max-height: 280px; }
+  html, body { overflow: auto; }
+}
+
+/* ─── Glass panel ─────────────────────────────────────────────── */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255 255 255 / 0.45);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* ─── LEFT PANEL ──────────────────────────────────────────────── */
+.left-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.back-nav {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+.back-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  color: var(--navy); font-size: 13px; font-weight: 600;
+  padding: 6px 10px; border-radius: 8px;
+  transition: background .15s;
+}
+.back-btn:hover { background: rgba(4 56 115 / 0.08); }
+
+.device-card { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.device-img {
+  width: 100%; height: 150px; border-radius: 12px;
+  background: linear-gradient(135deg, #e8eef8 0%, #ccdaf0 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; margin-bottom: 12px; overflow: hidden; position: relative;
+}
+.device-img img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+.device-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: #fff; font-size: 10px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px;
+}
+.device-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.device-type-label { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+
+.info-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; margin-bottom: 6px;
+}
+.info-label { color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.info-value { font-weight: 600; color: var(--text); }
+.info-value.price { color: var(--navy); font-size: 15px; }
+
+.divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+/* Rental summary card */
+.rental-summary {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+}
+.status-badge.s1    { background: rgba(4 56 115 / 0.08);   color: var(--navy); }
+.status-badge.s2    { background: rgba(245 158 11 / 0.12); color: var(--amber); }
+.status-badge.s3    { background: rgba(79 156 249 / 0.14); color: #0a7abf; }
+.status-badge.s4    { background: rgba(34 197 94 / 0.15);  color: var(--green); }
+.status-badge.error { background: rgba(239 68 68 / 0.1);   color: var(--red); }
+
+/* Mini calendar */
+.mini-calendar {
+  padding: 14px 16px 16px;
+  flex: 1; overflow-y: auto;
+}
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.cal-month { font-size: 13px; font-weight: 700; color: var(--text); }
+.cal-nav-btn {
+  width: 26px; height: 26px; border-radius: 7px; border: 1.5px solid var(--border);
+  background: none; cursor: pointer; font-size: 13px; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.cal-nav-btn:hover { background: rgba(4 56 115 / 0.08); color: var(--navy); }
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+  text-align: center;
+}
+.cal-day-header { font-size: 10px; font-weight: 600; color: var(--muted); padding: 4px 0; }
+.cal-day {
+  font-size: 11px; padding: 5px 2px; border-radius: 6px; cursor: pointer;
+  color: var(--text); transition: background .15s;
+}
+.cal-day:hover { background: rgba(4 56 115 / 0.08); }
+.cal-day.rental { background: rgba(4 56 115 / 0.15); color: var(--navy); font-weight: 600; }
+.cal-day.rental-start, .cal-day.rental-end {
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: #fff; font-weight: 700; border-radius: 8px;
+}
+.cal-day.today { border: 1.5px solid var(--blue); }
+.cal-day.disabled { opacity: .35; cursor: default; pointer-events: none; }
+.cal-day.empty { visibility: hidden; }
+
+/* ─── MAIN CHAT AREA ──────────────────────────────────────────── */
+.chat-main {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.chat-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  flex-shrink: 0;
+}
+.chat-room-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.chat-header-info h2 { font-size: 15px; font-weight: 700; color: var(--text); }
+.chat-header-info p  { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.conn-wrap { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; transition: background .3s;
+}
+.conn-dot.connected   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.conn-dot.connecting  { background: var(--yellow); animation: blink 1s ease-in-out infinite; }
+.conn-dot.disconnected { background: var(--red); }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+/* Message feed */
+.msg-feed {
+  flex: 1; overflow-y: auto;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 2px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin; scrollbar-color: rgba(4 56 115 / 0.2) transparent;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(4 56 115 / 0.2); border-radius: 10px; }
+
+.date-div {
+  display: flex; align-items: center; gap: 10px;
+  margin: 12px 0 8px; font-size: 11px; font-weight: 600;
+  color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+}
+.date-div::before, .date-div::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Chat rows */
+.msg-row {
+  display: flex; align-items: flex-end; gap: 8px;
+  max-width: 80%; animation: msgIn .22s ease-out;
+}
+@keyframes msgIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.msg-row.own { align-self: flex-end; flex-direction: row-reverse; }
+
+.msg-av {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.msg-group { display: flex; flex-direction: column; gap: 2px; max-width: 100%; }
+.msg-meta { display: flex; align-items: baseline; gap: 6px; padding: 0 10px; font-size: 11px; }
+.msg-row.own .msg-meta { justify-content: flex-end; }
+.msg-name { font-weight: 600; color: var(--text); }
+.msg-time { color: var(--muted); }
+.msg-seen { color: var(--blue); font-size: 11px; margin-top: 2px; text-align: right; }
+
+.bubble {
+  padding: 9px 14px; border-radius: 16px;
+  font-size: 14px; line-height: 1.55; color: var(--text);
+  background: rgba(255 255 255 / 0.7); border: 1px solid rgba(255 255 255 / 0.6);
+  word-break: break-word; max-width: 440px;
+}
+.msg-row.own .bubble {
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: #fff; border-color: transparent;
+}
+.msg-row.consecutive .msg-av   { visibility: hidden; }
+.msg-row.consecutive .msg-meta { display: none; }
+
+/* Image bubble */
+.bubble-img {
+  max-width: 260px; border-radius: 12px; overflow: hidden; cursor: zoom-in;
+  border: 1px solid rgba(255 255 255 / 0.6);
+}
+.bubble-img img { width: 100%; display: block; transition: opacity .2s; }
+.bubble-img img:hover { opacity: .92; }
+
+/* System event cards */
+.sys-card {
+  align-self: center; width: 100%; max-width: 440px;
+  background: rgba(4 56 115 / 0.05);
+  border: 1.5px solid rgba(4 56 115 / 0.15);
+  border-radius: 14px; padding: 14px 18px;
+  margin: 8px 0; animation: msgIn .3s ease-out;
+  font-size: 13px;
+}
+.sys-card .sys-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--muted); margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sys-card .sys-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.sys-card .sys-row .lbl { color: var(--muted); }
+.sys-card .sys-row .val { font-weight: 600; color: var(--text); }
+.sys-card .sys-actions { display: flex; gap: 8px; margin-top: 12px; }
+.sys-btn {
+  padding: 8px 16px; border-radius: 9px; font-size: 13px; font-weight: 600;
+  border: none; cursor: pointer; transition: opacity .2s, transform .12s;
+}
+.sys-btn:hover { opacity: .88; transform: translateY(-1px); }
+.sys-btn.accept  { background: var(--green); color: #fff; }
+.sys-btn.reject  { background: rgba(239 68 68 / 0.1); color: var(--red); border: 1.5px solid rgba(239 68 68 / 0.25); }
+.sys-btn.counter { background: rgba(201 124 44 / 0.1); color: var(--amber); border: 1.5px solid rgba(201 124 44 / 0.25); }
+.sys-btn.pending-wait { flex:2; background: rgba(234 179 8 / 0.08); color: #92400e; border: 1.5px dashed rgba(234 179 8 / 0.5); cursor: default; pointer-events: none; }
+
+/* Confirmed rental banner */
+.confirmed-card {
+  align-self: center; width: 100%; max-width: 440px;
+  background: linear-gradient(135deg, rgba(34 197 94 / 0.1), rgba(34 197 94 / 0.04));
+  border: 2px solid rgba(34 197 94 / 0.4);
+  border-radius: 16px; padding: 20px 22px;
+  margin: 10px 0; text-align: center;
+  animation: popIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+.confirmed-card .conf-icon { font-size: 36px; margin-bottom: 8px; }
+.confirmed-card h3 { font-size: 17px; font-weight: 800; color: var(--green); margin-bottom: 6px; }
+.confirmed-card .conf-rows { text-align: left; margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+.conf-row { display: flex; justify-content: space-between; font-size: 13px; }
+.conf-row .lbl { color: var(--muted); }
+.conf-row .val { font-weight: 600; color: var(--text); }
+
+/* Payment card */
+.payment-card {
+  align-self: center; width: 100%; max-width: 400px;
+  background: rgba(201 124 44 / 0.05);
+  border: 1.5px solid rgba(201 124 44 / 0.25);
+  border-radius: 14px; padding: 16px 18px;
+  margin: 8px 0; animation: msgIn .3s ease-out;
+}
+.payment-card .pay-title { font-size: 13px; font-weight: 700; color: var(--amber); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.payment-card .qr-wrap {
+  width: 160px; height: 160px; border-radius: 10px;
+  background: #fff; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; overflow: hidden;
+  border: 1.5px solid rgba(201 124 44 / 0.2);
+}
+.payment-card .qr-wrap img { width: 100%; height: 100%; object-fit: contain; }
+.payment-card .pay-amount { text-align: center; font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.payment-card .pay-note { text-align: center; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+.pay-confirm-btn {
+  width: 100%; padding: 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+  background: linear-gradient(135deg, var(--amber), #e8a445); color: #fff; border: none;
+  cursor: pointer; transition: opacity .2s, transform .12s;
+  box-shadow: 0 4px 14px rgba(201 124 44 / 0.35);
+}
+.pay-confirm-btn:hover { opacity: .9; transform: translateY(-1px); }
+
+/* Reaction hover */
+.bubble-wrap { position: relative; display: inline-block; }
+.reactions-bar {
+  position: absolute; bottom: calc(100% + 4px); left: 0;
+  background: rgba(255 255 255 / 0.95); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 8px;
+  display: none; gap: 4px; align-items: center;
+  box-shadow: 0 4px 16px rgba(0 0 0 / 0.12);
+  z-index: 10; white-space: nowrap;
+}
+.msg-row.own .reactions-bar { left: auto; right: 0; }
+.bubble:hover ~ .reactions-bar,
+.bubble-wrap:hover .reactions-bar { display: flex; }
+.react-btn { font-size: 18px; cursor: pointer; border: none; background: none; padding: 2px 4px; border-radius: 6px; transition: transform .12s; }
+.react-btn:hover { transform: scale(1.3); }
+.msg-reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.reaction-pill {
+  background: rgba(4 56 115 / 0.08); border: 1px solid rgba(4 56 115 / 0.15);
+  border-radius: 999px; padding: 2px 8px; font-size: 13px; cursor: pointer;
+  transition: background .15s;
+}
+.reaction-pill:hover { background: rgba(4 56 115 / 0.15); }
+
+/* Typing bar */
+.typing-bar { padding: 4px 20px; font-size: 12px; color: var(--muted); height: 22px; font-style: italic; flex-shrink: 0; }
+.t-dots { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 4px; }
+.t-dots span { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); animation: td 1.2s ease-in-out infinite; }
+.t-dots span:nth-child(2) { animation-delay: .2s; }
+.t-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes td { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+/* Input area */
+.input-area { padding: 12px 16px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.input-toolbar { display: flex; gap: 6px; margin-bottom: 8px; }
+.tool-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: rgba(4 56 115 / 0.03); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: background .15s, color .15s, border-color .15s;
+}
+.tool-btn:hover { background: rgba(4 56 115 / 0.1); color: var(--navy); border-color: rgba(4 56 115 / 0.25); }
+#fileInput, #imgInput { display: none; }
+
+.input-wrap {
+  display: flex; align-items: flex-end; gap: 8px;
+  background: rgba(4 56 115 / 0.04); border: 1.5px solid rgba(4 56 115 / 0.15);
+  border-radius: 14px; padding: 8px 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.input-wrap:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(4 56 115 / 0.1); }
+
+/* File/image preview chips */
+.attach-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.attach-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(4 56 115 / 0.08); border: 1px solid rgba(4 56 115 / 0.2);
+  border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--navy);
+}
+.attach-chip img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+.attach-chip .remove-chip { cursor: pointer; color: var(--muted); font-size: 14px; margin-left: 4px; }
+.attach-chip .remove-chip:hover { color: var(--red); }
+
+#chatInput {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text);
+  resize: none; max-height: 100px; line-height: 1.5;
+}
+#chatInput::placeholder { color: var(--muted); }
+
+.send-btn {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .2s, transform .15s;
+  box-shadow: 0 3px 10px rgba(4 56 115 / 0.38);
+}
+.send-btn:hover { transform: scale(1.06); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.send-btn svg { width: 16px; height: 16px; fill: #fff; }
+
+/* Drag-and-drop overlay */
+.drop-overlay {
+  position: absolute; inset: 0; z-index: 50;
+  background: rgba(4 56 115 / 0.08);
+  border: 3px dashed rgba(4 56 115 / 0.4);
+  border-radius: var(--radius);
+  display: none; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 600; color: var(--navy);
+  pointer-events: none; border-radius: 16px;
+}
+.drop-overlay.active { display: flex; }
+
+/* ─── RIGHT PANEL — Agreement ─────────────────────────────────── */
+.right-panel {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.right-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 800; color: var(--navy);
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.right-header .header-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+
+.right-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+/* Agreement card */
+.agree-card {
+  background: rgba(4 56 115 / 0.03); border: 1.5px solid rgba(4 56 115 / 0.12);
+  border-radius: 14px; padding: 16px;
+}
+.agree-card .card-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.agree-field { margin-bottom: 12px; }
+.agree-field label {
+  display: block; font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px;
+}
+.agree-field input[type="date"],
+.agree-field input[type="number"],
+.agree-field input[type="text"] {
+  width: 100%; padding: 9px 12px;
+  border: 1.5px solid var(--border); border-radius: 9px;
+  font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text);
+  outline: none; background: rgba(4 56 115 / 0.02);
+  transition: border-color .2s, box-shadow .2s;
+}
+.agree-field input:focus { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(4 56 115 / 0.1); }
+
+.total-display {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(4 56 115 / 0.06); border-radius: 10px; padding: 10px 14px;
+  margin-top: 4px;
+}
+.total-display .lbl { font-size: 12px; color: var(--muted); }
+.total-display .amount { font-size: 18px; font-weight: 800; color: var(--navy); }
+
+/* Propose / Confirm buttons */
+.panel-actions { display: flex; flex-direction: column; gap: 8px; }
+.btn-propose {
+  width: 100%; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  background: linear-gradient(135deg, var(--navy), var(--navy2)); color: #fff; border: none;
+  cursor: pointer; transition: opacity .2s; box-shadow: 0 3px 12px rgba(4 56 115 / 0.3);
+}
+.btn-propose:hover { opacity: .88; }
+.btn-confirm-rental {
+  width: 100%; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  background: linear-gradient(135deg, var(--green), #16a34a); color: #fff; border: none;
+  cursor: pointer; transition: opacity .2s; box-shadow: 0 3px 12px rgba(34 197 94 / 0.3);
+}
+.btn-confirm-rental:hover { opacity: .88; }
+.btn-send-qr {
+  width: 100%; padding: 11px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  background: linear-gradient(135deg, var(--amber), #e8a445); color: #fff; border: none;
+  cursor: pointer; transition: opacity .2s; box-shadow: 0 3px 12px rgba(201 124 44 / 0.3);
+}
+.btn-send-qr:hover { opacity: .88; }
+#qrFileInput { display: none; }
+
+/* Schedule mini calendar in right panel */
+.right-cal .cal-grid .cal-day { font-size: 11px; }
+
+/* ─── Image lightbox ──────────────────────────────────────────── */
+#lightbox {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0 0 0 / 0.88); backdrop-filter: blur(10px);
+  display: none; align-items: center; justify-content: center; flex-direction: column;
+}
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 80vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0 0 0 / 0.5); }
+#lightbox .lb-close {
+  position: absolute; top: 20px; right: 24px;
+  font-size: 28px; color: #fff; cursor: pointer; opacity: .8; transition: opacity .2s;
+}
+#lightbox .lb-close:hover { opacity: 1; }
+
+/* ─── Auth overlay ────────────────────────────────────────────── */
+.auth-overlay {
+  display: none; position: fixed; inset: 0;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  align-items: center; justify-content: center; z-index: 999;
+}
+.auth-card {
+  background: #fff; border-radius: 20px; padding: 40px; text-align: center; max-width: 360px;
+}
+.auth-card h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+.auth-card p  { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+.btn-login-link {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--navy), var(--navy2));
+  color: #fff; text-decoration: none; padding: 12px 28px;
+  border-radius: 12px; font-weight: 600; font-size: 14px;
+}
+  </style>
+</head>
+<body>
+
+<!-- ─── Auth overlay ──────────────────────────────────────────── -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div style="font-size:44px;margin-bottom:12px">🔐</div>
+    <h2>กรุณาเข้าสู่ระบบ</h2>
+    <p>คุณต้องล็อกอินก่อนจะเจรจาขอเช่าได้</p>
+    <a id="loginLink" href="/features/auth/login.html" class="btn-login-link">ไปหน้าล็อกอิน</a>
+  </div>
+</div>
+
+<!-- ─── Date picker modal (shown first) ───────────────────────── -->
+<div class="modal-backdrop" id="dateModal">
+  <div class="modal-card">
+    <h2>📅 เลือกวันเช่า</h2>
+    <p class="modal-sub">กำหนดช่วงวันที่เช่าเพื่อเริ่มต้นเจรจากับเจ้าของ</p>
+    <div class="field-group">
+      <div class="field">
+        <label>วันที่เริ่มเช่า</label>
+        <input type="date" id="modalStart" />
+      </div>
+      <div class="field">
+        <label>วันที่สิ้นสุด</label>
+        <input type="date" id="modalEnd" />
+      </div>
+    </div>
+    <div class="modal-price-preview">
+      <span class="label">ราคารวมเบื้องต้น</span>
+      <span class="value" id="modalPricePreview">— บาท</span>
+    </div>
+    <div class="modal-actions">
+      <a class="btn btn-ghost" id="modalBackBtn" href="#">← กลับ</a>
+      
+      <button class="btn btn-primary" id="modalConfirmBtn" onclick="confirmDates()">เริ่มเจรจา →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Image lightbox ────────────────────────────────────────── -->
+<div id="lightbox">
+  <span class="lb-close" onclick="closeLightbox()">✕</span>
+  <img id="lightboxImg" src="" alt="ขยาย" />
+</div>
+
+<!-- ─── Triple-panel shell ────────────────────────────────────── -->
+<div class="shell">
+
+  <!-- ════════ LEFT ════════ -->
+  <aside class="glass left-panel">
+    <div class="back-nav">
+      <a class="back-btn" id="backBtn" href="#">← กลับไปหน้าอุปกรณ์</a>
+    </div>
+
+    <div class="device-card">
+      <div class="device-img" id="devImgWrap">
+        <span id="devEmoji">📱</span>
+        <span class="device-badge" id="devBadge">อุปกรณ์</span>
+      </div>
+      <div class="device-name" id="devName">กำลังโหลด...</div>
+      <div class="device-type-label" id="devType">—</div>
+      <div class="info-row">
+        <span class="info-label">👤 เจ้าของ</span>
+        <span class="info-value" id="devOwner">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">💰 ราคา/วัน</span>
+        <span class="info-value price" id="devPrice">—</span>
+      </div>
+    </div>
+
+    <div class="rental-summary">
+      <div class="section-title">สรุปการเช่า</div>
+      <div class="info-row"><span class="info-label">📅 เริ่ม</span><span class="info-value" id="sumStart">—</span></div>
+      <div class="info-row"><span class="info-label">📅 สิ้นสุด</span><span class="info-value" id="sumEnd">—</span></div>
+      <div class="info-row"><span class="info-label">🕐 จำนวน</span><span class="info-value" id="sumDays">—</span></div>
+      <div class="divider"></div>
+      <div class="info-row"><span class="info-label">💵 รวม</span><span class="info-value price" id="sumTotal">— บาท</span></div>
+      <div style="margin-top:10px">
+        <div class="status-badge s1" id="dealStatus">1️⃣ Request Pending</div>
+      </div>
+    </div>
+
+    <div class="mini-calendar" id="miniCalWrap">
+      <div class="section-title">ปฏิทิน</div>
+      <div id="miniCal"></div>
+    </div>
+  </aside>
+
+  <!-- ════════ MAIN CHAT ════════ -->
+  <main class="glass chat-main" style="position:relative">
+    <div class="drop-overlay" id="dropOverlay">📎 วางไฟล์ / รูปภาพที่นี่</div>
+
+    <div class="chat-header">
+      <div class="chat-room-icon">💬</div>
+      <div class="chat-header-info">
+        <h2 id="chatRoomTitle">เจรจา — อุปกรณ์</h2>
+        <p id="chatRoomSub">เจรจาเงื่อนไขการเช่าได้ที่นี่</p>
+      </div>
+      <div class="conn-wrap">
+        <div class="conn-dot connecting" id="connDot"></div>
+        <span id="connText">กำลังเชื่อมต่อ...</span>
+      </div>
+    </div>
+
+    <div class="msg-feed" id="msgFeed"></div>
+
+    <div class="typing-bar" id="typingBar"></div>
+
+    <div class="input-area">
+      <div class="attach-preview" id="attachPreview"></div>
+      <div class="input-toolbar">
+        <button class="tool-btn" title="แนบรูปภาพ" onclick="document.getElementById('imgInput').click()">🖼️</button>
+        <button class="tool-btn" title="แนบไฟล์"   onclick="document.getElementById('fileInput').click()">📎</button>
+        <button class="tool-btn" title="Emoji"      id="emojiToggle">😊</button>
+        <input type="file" id="imgInput"  accept="image/*" multiple />
+        <input type="file" id="fileInput" multiple />
+      </div>
+      <div class="input-wrap">
+        <textarea id="chatInput" rows="1" placeholder="พิมพ์ข้อความ..." disabled></textarea>
+        <button class="send-btn" id="sendBtn" disabled title="ส่ง">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ════════ RIGHT PANEL ════════ -->
+  <aside class="glass right-panel">
+    <div class="right-header">
+      <div class="header-icon">📋</div>
+      ข้อตกลงการเช่า
+    </div>
+    <div class="right-body">
+
+      <!-- Editable agreement -->
+      <div class="agree-card">
+        <div class="card-label">📝 แก้ไขเงื่อนไข</div>
+        <div class="agree-field">
+          <label>วันเริ่มเช่า</label>
+          <input type="date" id="agreeStart" />
+        </div>
+        <div class="agree-field">
+          <label>วันสิ้นสุด</label>
+          <input type="date" id="agreeEnd" />
+        </div>
+        <div class="agree-field">
+          <label>ราคา/วัน (บาท)</label>
+          <input type="number" id="agreePrice" min="0" step="1" />
+        </div>
+        <div class="agree-field">
+          <label>หมายเหตุ</label>
+          <input type="text" id="agreeNote" placeholder="เช่น สถานที่รับของ, เงื่อนไขพิเศษ" />
+        </div>
+        <div class="total-display">
+          <span class="lbl">ราคารวม</span>
+          <span class="amount" id="agreeTotal">— บาท</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel-actions">
+        <button class="btn-propose" onclick="proposeSchedule()">📤 เสนอเงื่อนไขใหม่</button>
+        <button class="btn-confirm-rental" id="confirmRentalBtn" onclick="confirmRental()">✅ ยืนยันการเช่า (เจ้าของ)</button>
+        <button class="btn-send-qr" onclick="document.getElementById('qrFileInput').click()">💳 ส่ง QR ชำระเงิน</button>
+        <input type="file" id="qrFileInput" accept="image/*" />
+      </div>
+
+      <!-- Mini calendar (right side) -->
+      <div class="agree-card right-cal">
+        <div class="card-label">📅 ปฏิทินที่เลือก</div>
+        <div id="rightCal"></div>
+      </div>
+
+    </div>
+  </aside>
+</div>
+
+<script>
+'use strict';
+
+/* ─── Query params ───────────────────────────────────────────── */
+const QP          = Object.fromEntries(new URLSearchParams(location.search));
+const deviceId    = parseInt(QP.deviceId)   || 0;
+const deviceName  = decodeURIComponent(QP.deviceName  || 'อุปกรณ์');
+const ownerName   = decodeURIComponent(QP.ownerName   || 'เจ้าของ');
+const pricePerDay = parseFloat(QP.pricePerDay) || 0;
+const deviceType  = decodeURIComponent(QP.deviceType  || 'อุปกรณ์');
+const deviceImg   = QP.deviceImg ? decodeURIComponent(QP.deviceImg) : '';
+let   requestNo   = parseInt(QP.requestNo) || 0;  // filled after submit or passed via URL
+
+/* ─── Auth ───────────────────────────────────────────────────── */
+function getAuth() {
+  const token = localStorage.getItem('access_token');
+  if (!token) return null;
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    if (p.exp * 1000 < Date.now()) return null;
+    return { userId: p.user_id, email: p.email, name: p.name || p.email.split('@')[0], token };
+  } catch { return null; }
+}
+const user = getAuth();
+
+/* ─── State ──────────────────────────────────────────────────── */
+let rentalStart   = '';
+let rentalEnd     = '';
+let rentalPrice   = pricePerDay;
+let rentalNote    = '';
+let dealConfirmed = false;
+let pendingProposalId = null;
+let ws   = null, wsRoom = '';
+let reconnectTimer = null, reconnectDelay = 1000;
+const typingPeers  = new Map();
+let typingTimer = null, isTyping = false;
+const localMsgs    = [];
+const pendingFiles  = [];
+let isOwner = false;  // true when the current user owns this device
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function initials(n) {
+  if (!n) return '?';
+  const p = n.trim().split(/\s+/);
+  return (p.length >= 2 ? p[0][0] + p[1][0] : n[0]).toUpperCase();
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function fmtDate(d) {
+  const t = new Date(); if (sameDay(d, t)) return 'วันนี้';
+  const y = new Date(t); y.setDate(t.getDate() - 1); if (sameDay(d, y)) return 'เมื่อวาน';
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function fmtTime(d) { return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); }
+function thaiDate(str) {
+  if (!str) return '—';
+  return new Date(str + 'T00:00:00').toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function daysBetween(a, b) {
+  if (!a || !b) return 0;
+  return Math.max(0, Math.ceil((new Date(b) - new Date(a)) / 864e5) + 1);
+}
+function calcTotal(start, end, ppd) {
+  const d = daysBetween(start, end);
+  return d > 0 ? (d * ppd).toFixed(2) : null;
+}
+
+/* ─── Boot ───────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  if (!user) {
+    document.getElementById('authOverlay').style.display = 'flex';
+    const next = encodeURIComponent(location.href);
+    document.getElementById('loginLink').href = `/features/auth/login.html?next=${next}`;
+    return;
+  }
+
+  /* Set back link to the specific device being discussed */
+  const backUrl = deviceId ? `/features/devices/rentdevice.html?id=${deviceId}` : '/features/devices/devices.html';
+  document.getElementById('backBtn').href = backUrl;
+  document.getElementById('modalBackBtn').href = backUrl;
+
+  /* Populate device info from query params */
+  document.getElementById('devName').textContent  = deviceName;
+  document.getElementById('devType').textContent  = deviceType;
+  document.getElementById('devBadge').textContent = deviceType;
+  document.getElementById('devOwner').textContent = ownerName;
+  document.getElementById('devPrice').textContent = pricePerDay ? pricePerDay.toFixed(2) + ' บาท/วัน' : '—';
+  document.title = `Notelet — เจรจา ${deviceName}`;
+
+  /* Fetch device image from database */
+  if (deviceId) {
+    fetch(`/api/devices/${deviceId}`)
+      .then(r => r.json())
+      .then(json => {
+        if (!json.success || !json.data) return;
+        const d = json.data;
+
+        /* ── Device image ── */
+        let imgUrl = d.imageUrl || '';
+        if (imgUrl.startsWith('[')) {
+          try { imgUrl = JSON.parse(imgUrl)[0] || ''; } catch(e) { imgUrl = ''; }
+        }
+        if (imgUrl) {
+          document.getElementById('devImgWrap').innerHTML =
+            `<img src="${escHtml(imgUrl)}" alt="${escHtml(deviceName)}" />` +
+            `<span class="device-badge">${escHtml(deviceType)}</span>`;
+        }
+
+        /* ── Ownership check: show confirm button only to the device owner ── */
+        const ownerUserId = d.ownerUserId || 0;
+        isOwner = user && ownerUserId > 0 && user.userId === ownerUserId;
+        const confirmBtn = document.getElementById('confirmRentalBtn');
+        if (confirmBtn) {
+          if (!isOwner) {
+            confirmBtn.style.display = 'none';
+          }
+        }
+        /* ── Hide QR payment button from renters (owners only) ── */
+        const qrBtn = document.querySelector('.btn-send-qr');
+        if (qrBtn && !isOwner) {
+          qrBtn.style.display = 'none';
+          const qrInput = document.getElementById('qrFileInput');
+          if (qrInput) qrInput.style.display = 'none';
+        }
+      })
+      .catch(() => {}); // fallback to emoji on error
+  }
+
+  /* Pre-fill modal dates from QP or today */
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const qStart = QP.startDate || today.toISOString().slice(0,10);
+  const qEnd   = QP.endDate   || tomorrow.toISOString().slice(0,10);
+  document.getElementById('modalStart').value = qStart;
+  document.getElementById('modalEnd').value   = qEnd;
+  updateModalPrice();
+
+  /* Right panel defaults */
+  document.getElementById('agreeStart').value = qStart;
+  document.getElementById('agreeEnd').value   = qEnd;
+  document.getElementById('agreePrice').value = pricePerDay || '';
+  updateAgreeTotal();
+
+  /* Bind events */
+  document.getElementById('modalStart').addEventListener('change', updateModalPrice);
+  document.getElementById('modalEnd').addEventListener('change',   updateModalPrice);
+  document.getElementById('agreeStart').addEventListener('change', () => { updateAgreeTotal(); renderRightCal(); });
+  document.getElementById('agreeEnd').addEventListener('change',   () => { updateAgreeTotal(); renderRightCal(); });
+  document.getElementById('agreePrice').addEventListener('input',  updateAgreeTotal);
+
+  /* File inputs */
+  document.getElementById('imgInput').addEventListener('change',     e => addAttachments(e.target.files, 'image'));
+  document.getElementById('fileInput').addEventListener('change',    e => addAttachments(e.target.files, 'file'));
+  document.getElementById('qrFileInput').addEventListener('change',  e => sendQR(e.target.files[0]));
+
+  /* Send button / input */
+  document.getElementById('sendBtn').addEventListener('click', sendMsg);
+  const ci = document.getElementById('chatInput');
+  ci.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } });
+  ci.addEventListener('input', () => {
+    autoResize(ci);
+    document.getElementById('sendBtn').disabled = !(ci.value.trim() || pendingFiles.length);
+    if (ci.value.trim()) startTyping(); else stopTyping();
+  });
+
+  /* Drag and drop */
+  const shell = document.querySelector('.chat-main');
+  shell.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('dropOverlay').classList.add('active'); });
+  shell.addEventListener('dragleave', e => { if (!shell.contains(e.relatedTarget)) document.getElementById('dropOverlay').classList.remove('active'); });
+  shell.addEventListener('drop', e => {
+    e.preventDefault();
+    document.getElementById('dropOverlay').classList.remove('active');
+    addAttachments(e.dataTransfer.files, 'auto');
+  });
+
+  /* Emoji simple picker */
+  document.getElementById('emojiToggle').addEventListener('click', () => {
+    const emojis = ['😀','😂','🤣','😊','😍','💪','🙏','👍','❤️','🔥','✅','❌','📅','💰','🤝','📱','💬','🎉'];
+    let ep = document.getElementById('emojiPop');
+    if (ep) { ep.remove(); return; }
+    ep = document.createElement('div');
+    ep.id = 'emojiPop';
+    ep.style.cssText = 'position:absolute;bottom:110px;left:16px;background:#fff;border:1px solid rgba(4 56 115/0.15);border-radius:14px;padding:10px;box-shadow:0 8px 30px rgba(0,0,0,.15);display:flex;flex-wrap:wrap;gap:4px;width:240px;z-index:50;animation:slideUp .2s ease';
+    emojis.forEach(em => {
+      const b = document.createElement('button');
+      b.textContent = em; b.style.cssText = 'font-size:20px;background:none;border:none;cursor:pointer;border-radius:7px;padding:4px;transition:background .15s';
+      b.addEventListener('mouseenter', () => b.style.background = 'rgba(4,56,115,0.08)');
+      b.addEventListener('mouseleave', () => b.style.background = 'none');
+      b.addEventListener('click', () => {
+        const ci2 = document.getElementById('chatInput');
+        ci2.value += em; ci2.focus(); ep.remove();
+        document.getElementById('sendBtn').disabled = false;
+      });
+      ep.appendChild(b);
+    });
+    document.querySelector('.chat-main').appendChild(ep);
+    setTimeout(() => document.addEventListener('click', function rm(e) { if (!ep.contains(e.target) && e.target.id !== 'emojiToggle') { ep.remove(); document.removeEventListener('click', rm); } }), 50);
+  });
+
+  /* Skip date modal if room is already provided (owner entering from chat inbox) or skipModal=1 */
+  if (QP.skipModal === '1' || QP.room) {
+    confirmDates(true);
+  }
+  /* else modal is shown by default */
+});
+
+/* ─── Date modal ─────────────────────────────────────────────── */
+function updateModalPrice() {
+  const s = document.getElementById('modalStart').value;
+  const e = document.getElementById('modalEnd').value;
+  const t = calcTotal(s, e, pricePerDay);
+  document.getElementById('modalPricePreview').textContent = t ? t + ' บาท' : '— บาท';
+}
+
+function confirmDates(skipModal = false) {
+  const s = document.getElementById('modalStart').value || document.getElementById('agreeStart').value;
+  const e = document.getElementById('modalEnd').value   || document.getElementById('agreeEnd').value;
+  if (!skipModal && (!s || !e || new Date(s) > new Date(e))) {
+    document.getElementById('modalStart').focus();
+    return;
+  }
+  rentalStart = s || document.getElementById('agreeStart').value;
+  rentalEnd   = e || document.getElementById('agreeEnd').value;
+  rentalPrice = parseFloat(document.getElementById('agreePrice').value) || pricePerDay;
+
+  document.getElementById('dateModal').classList.add('hidden');
+
+  /* Sync agreement panel */
+  document.getElementById('agreeStart').value = rentalStart;
+  document.getElementById('agreeEnd').value   = rentalEnd;
+  updateAgreeTotal();
+  updateSummary();
+  renderMiniCal();
+  renderRightCal();
+  openChat();
+}
+
+function openChat() {
+  // If a specific room or renterId is provided in the URL, pass renterId to the API
+  // so the owner joins the renter's correct room instead of creating their own.
+  const renterId = parseInt(QP.renterId) || 0;
+  const roomOverride = QP.room || '';
+
+  if (roomOverride) {
+    // Room name given directly — connect without calling the API
+    wsRoom = roomOverride;
+    document.getElementById('chatRoomTitle').textContent = `เจรจา — ${deviceName}`;
+    document.getElementById('chatRoomSub').textContent   = `ห้อง ${roomOverride} · ${ownerName}`;
+    connectWS(roomOverride);
+    enableInput(true);
+    return;
+  }
+
+  fetch(`/api/chat/device-room`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + user.token },
+    body: JSON.stringify({
+      deviceId,
+      ...(renterId   ? { renterId }   : {}),
+      ...(requestNo  ? { requestNo }  : {}),
+    }),
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.roomName) throw new Error('no room');
+      wsRoom = data.roomName;
+      document.getElementById('chatRoomTitle').textContent = `เจรจา — ${deviceName}`;
+      document.getElementById('chatRoomSub').textContent   = `ห้อง ${data.roomName} · ${ownerName}`;
+      connectWS(data.roomName);
+      enableInput(true);
+      /* Send opening system message */
+      setTimeout(() => {
+        const d = daysBetween(rentalStart, rentalEnd);
+        const total = calcTotal(rentalStart, rentalEnd, rentalPrice);
+        appendSysCard({
+          title: '📋 คำขอเช่าเบื้องต้น',
+          rows: [
+            ['อุปกรณ์', deviceName],
+            ['วันเริ่ม', thaiDate(rentalStart)],
+            ['วันสิ้นสุด', thaiDate(rentalEnd)],
+            ['จำนวน', `${d} วัน`],
+            ['ราคา/วัน', `${rentalPrice.toFixed(2)} บาท`],
+            ['ราคารวม', `${total} บาท`],
+          ],
+          actions: [
+            { label: '✅ ยอมรับ', cls: 'accept',  fn: 'acceptProposal(this)' },
+            { label: '✏️ เสนอใหม่', cls: 'counter', fn: 'openCounterProposal()' },
+          ],
+          id: 'initial',
+        });
+      }, 400);
+    })
+    .catch(() => {
+      /* Fallback — no server, still let UI work */
+      enableInput(true);
+      wsRoom = `device-${deviceId}`;
+      appendSystemText('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ — ทำงานแบบออฟไลน์');
+    });
+}
+
+/* ─── WebSocket ──────────────────────────────────────────────── */
+function connectWS(room) {
+  setConn('connecting', 'กำลังเชื่อมต่อ...');
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/api/chat/ws?token=${encodeURIComponent(user.token)}&room=${encodeURIComponent(room)}`);
+
+  ws.onopen = () => {
+    reconnectDelay = 1000;
+    setConn('connected', 'เชื่อมต่อแล้ว');
+    ws.send(JSON.stringify({ type: 'history', roomId: room }));
+  };
+  ws.onclose = () => {
+    setConn('disconnected', 'ขาดการเชื่อมต่อ — กำลังลองใหม่...');
+    reconnectTimer = setTimeout(() => connectWS(room), reconnectDelay);
+    reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+  };
+  ws.onerror = e => console.error('WS', e);
+  ws.onmessage = ({ data }) => {
+    let msg; try { msg = JSON.parse(data); } catch { return; }
+    switch (msg.type) {
+      case 'chat':
+        // Skip echo of own messages — already shown locally in sendMsg/sendAttachmentAsMsg
+        if (msg.senderId !== user.userId) appendMsg(msg);
+        break;
+      case 'history': onHistory(msg);   break;
+      case 'typing':  onTyping(msg);    break;
+      case 'join':    appendSystemText(`${escHtml(msg.senderName)} เข้าร่วมห้อง`); break;
+      case 'leave':   appendSystemText(`${escHtml(msg.senderName)} ออกจากห้อง`);   break;
+      case 'notification':
+        // Real-time push — tell the floating notification widget to refresh count
+        window.dispatchEvent(new CustomEvent('chatNewNotif', { detail: {} }));
+        showToastNotif(msg);
+        break;
+    }
+  };
+}
+
+function onHistory({ roomId, history }) {
+  document.getElementById('msgFeed').innerHTML = '';
+  localMsgs.length = 0;
+  // Pre-scan: check if the deal was already locked before rendering any proposal cards
+  const isLocked = (history || []).some(m => m.content === '__CONFIRMED__');
+  (history || []).forEach(m => appendMsg(m, true, isLocked));
+  scrollBottom();
+}
+
+function onTyping(msg) {
+  if (msg.senderId === user.userId) return;
+  const name = msg.senderName || 'ผู้ใช้';
+  if (msg.isTyping) {
+    clearTimeout(typingPeers.get(name));
+    typingPeers.set(name, setTimeout(() => { typingPeers.delete(name); renderTyping(); }, 4000));
+  } else {
+    clearTimeout(typingPeers.get(name)); typingPeers.delete(name);
+  }
+  renderTyping();
+}
+
+function renderTyping() {
+  const bar = document.getElementById('typingBar');
+  if (!typingPeers.size) { bar.innerHTML = ''; return; }
+  const names = [...typingPeers.keys()];
+  const lbl = names.length === 1 ? `${escHtml(names[0])} กำลังพิมพ์` : `${names.length} คนกำลังพิมพ์`;
+  bar.innerHTML = `${lbl}<span class="t-dots"><span></span><span></span><span></span></span>`;
+}
+
+function startTyping() {
+  if (!isTyping) { isTyping = true; wsSend({ type: 'typing', roomId: wsRoom, isTyping: true }); }
+  clearTimeout(typingTimer); typingTimer = setTimeout(stopTyping, 3000);
+}
+function stopTyping() {
+  clearTimeout(typingTimer);
+  if (isTyping) { isTyping = false; wsSend({ type: 'typing', roomId: wsRoom, isTyping: false }); }
+}
+function wsSend(obj) { if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+
+/* ─── In-page toast for incoming notification ──────────────── */
+function showToastNotif(msg) {
+  const toastRoom = msg.roomId || wsRoom;
+  const renterFromRoom = (() => { const m = String(toastRoom).match(/dev-\d+-u-(\d+)/); return m ? m[1] : ''; })();
+  const link = `/features/chat/rental-chat.html?room=${encodeURIComponent(toastRoom)}&deviceId=${msg.deviceId || deviceId}&deviceName=${encodeURIComponent(msg.deviceName || deviceName)}&skipModal=1${renterFromRoom ? '&renterId=' + encodeURIComponent(renterFromRoom) : ''}`;
+  const toast = document.createElement('div');
+  toast.style.cssText = [
+    'position:fixed','top:18px','right:18px','z-index:9999',
+    'background:#fff','border-radius:16px',
+    'box-shadow:0 8px 32px rgba(4,56,115,.25)','border:1px solid rgba(4,56,115,.12)',
+    'padding:13px 16px','display:flex','align-items:center','gap:12px',
+    'max-width:320px','cursor:pointer',
+    'animation:_cn_slideup .25s cubic-bezier(.34,1.56,.64,1)',
+    'font-family:\'Inter\',sans-serif',
+  ].join(';');
+  toast.innerHTML = `
+    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#043873,#0a5ba8);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💬</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:13px;font-weight:700;color:#043873;margin-bottom:2px;">${escHtml(msg.senderName || 'ผู้ใช้')} · ${escHtml(msg.deviceName || deviceName)}</div>
+      <div style="font-size:12px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(msg.content || 'ส่งข้อความใหม่')}</div>
+    </div>
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:18px;flex-shrink:0;line-height:1;">✕</button>
+  `;
+  toast.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'BUTTON') window.location.href = link;
+  });
+  document.body.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.style.opacity = '0'; toast.style.transition = 'opacity .4s'; setTimeout(() => toast.remove(), 400); }, 5000);
+}
+
+/* ─── Message rendering ──────────────────────────────────────── */
+function appendMsg(msg, bulk = false, isLocked = false) {
+  const feed = document.getElementById('msgFeed');
+  const prev = localMsgs.length ? localMsgs[localMsgs.length - 1] : null;
+  const isSelf = msg.senderId === user.userId;
+  const isSame = prev && prev.senderId === msg.senderId && (new Date(msg.timestamp) - new Date(prev.timestamp)) < 120000;
+
+  if (!prev || !sameDay(new Date(msg.timestamp), new Date(prev.timestamp))) {
+    const d = document.createElement('div'); d.className = 'date-div';
+    d.textContent = fmtDate(new Date(msg.timestamp)); feed.appendChild(d);
+  }
+
+  // Sentinel: deal was accepted (proposal confirmed)
+  if (msg.content === '__ACCEPTED__') {
+    // Legacy sentinel — แสดง text เท่านั้น ไม่ล็อค
+    appendSystemText('✅ ยอมรับเงื่อนไขแล้ว');
+    localMsgs.push(msg); if (!bulk) scrollBottom(); return;
+  }
+  // Sentinel: date accepted — sync agree panel & show message (ไม่ล็อค)
+  if (msg.content && msg.content.startsWith('__DATE_ACCEPTED__')) {
+    try {
+      const da = JSON.parse(msg.content.slice('__DATE_ACCEPTED__'.length));
+      if (da.s) {
+        rentalStart = da.s; rentalEnd = da.e; rentalPrice = parseFloat(da.p) || rentalPrice;
+        document.getElementById('agreeStart').value = rentalStart;
+        document.getElementById('agreeEnd').value   = rentalEnd;
+        document.getElementById('agreePrice').value = rentalPrice;
+        updateSummary(); updateAgreeTotal(); renderMiniCal(); renderRightCal();
+      }
+    } catch(e) {}
+    appendSystemText('✅ ยอมรับวันที่ใหม่แล้ว — รอเจ้าของกดยืนยันการเช่า');
+    document.getElementById('dealStatus').className = 'status-badge s2';
+    document.getElementById('dealStatus').textContent = '2️⃣ ตกลงวันที่แล้ว';
+    localMsgs.push(msg); if (!bulk) scrollBottom(); return;
+  }
+  // Sentinel: rental formally confirmed by owner
+  if (msg.content === '__CONFIRMED__') {
+    dealConfirmed = true; lockChat();
+    appendSystemText('🔒 การเช่าได้รับการยืนยัน — ห้องแชทปิดแล้ว');
+    localMsgs.push(msg); if (!bulk) scrollBottom(); return;
+  }
+
+  // Sentinel: QR payment card sent by owner
+  if (msg.content && msg.content.startsWith('__QR_PAYMENT__')) {
+    try {
+      const qd = JSON.parse(msg.content.slice('__QR_PAYMENT__'.length));
+      // isSelf = owner sees "waiting" view; renter sees confirm+attach slip view
+      renderQRCard(qd, isSelf);
+      document.getElementById('dealStatus').className = 'status-badge s3';
+      document.getElementById('dealStatus').textContent = '3️⃣ Rental Active';
+    } catch(err) {}
+    localMsgs.push(msg); if (!bulk) scrollBottom(); return;
+  }
+
+  // Structured proposal — render interactive card instead of a text bubble
+  if (msg.content && msg.content.startsWith('__PROPOSAL__')) {
+    try {
+      const pd = JSON.parse(msg.content.slice('__PROPOSAL__'.length));
+      const propId = 'prop-ws-' + (msg.messageId || Date.now());
+      renderProposalCard(pd, isSelf, isLocked, propId);
+      localMsgs.push(msg);
+      if (!bulk) scrollBottom();
+      return;
+    } catch { /* fall through to normal text render */ }
+  }
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${isSelf ? 'own' : ''} ${isSame ? 'consecutive' : ''}`.trim();
+
+  let content = '';
+  if (msg.imageUrl) {
+    content = `<div class="bubble-img" onclick="openLightbox('${escHtml(msg.imageUrl)}')"><img src="${escHtml(msg.imageUrl)}" alt="รูปภาพ" loading="lazy" /></div>`;
+  } else if (msg.fileUrl) {
+    content = `<div class="bubble"><a href="${escHtml(msg.fileUrl)}" target="_blank" style="color:inherit;text-decoration:underline">📎 ${escHtml(msg.fileName || 'ไฟล์แนบ')}</a></div>`;
+  } else {
+    content = `<div class="bubble-wrap"><div class="bubble">${escHtml(msg.content)}</div><div class="reactions-bar">${['❤️','👍','😂','🙏','🔥'].map(e => `<button class="react-btn" onclick="addReaction(this,'${e}')">${e}</button>`).join('')}</div></div>`;
+  }
+
+  row.innerHTML = `
+    <div class="msg-av">${initials(msg.senderName)}</div>
+    <div class="msg-group">
+      ${!isSame ? `<div class="msg-meta"><span class="msg-name">${escHtml(msg.senderName)}</span><span class="msg-time">${fmtTime(new Date(msg.timestamp))}</span></div>` : ''}
+      ${content}
+      ${isSelf ? `<div class="msg-seen" id="seen-${localMsgs.length}">✓ ส่งแล้ว</div>` : ''}
+    </div>`;
+
+  feed.appendChild(row);
+  localMsgs.push(msg);
+  if (!bulk) scrollBottom();
+}
+
+function addReaction(btn, emoji) {
+  const group = btn.closest('.msg-group');
+  let bar = group.querySelector('.msg-reactions');
+  if (!bar) { bar = document.createElement('div'); bar.className = 'msg-reactions'; group.appendChild(bar); }
+  const existing = [...bar.querySelectorAll('.reaction-pill')].find(p => p.dataset.emoji === emoji);
+  if (existing) {
+    const count = parseInt(existing.dataset.count || '1') + 1;
+    existing.dataset.count = count; existing.textContent = `${emoji} ${count}`;
+  } else {
+    const pill = document.createElement('div'); pill.className = 'reaction-pill'; pill.dataset.emoji = emoji; pill.dataset.count = '1';
+    pill.textContent = `${emoji} 1`; pill.onclick = () => addReaction({ closest: sel => pill.closest(sel), closest2: true }, emoji);
+    pill.onclick = () => { const c = parseInt(pill.dataset.count) + 1; pill.dataset.count = c; pill.textContent = `${emoji} ${c}`; };
+    bar.appendChild(pill);
+  }
+}
+
+function appendSysCard({ title, rows, actions, id }) {
+  const feed = document.getElementById('msgFeed');
+  const card = document.createElement('div'); card.className = 'sys-card'; if (id) card.id = 'sys-' + id;
+  card.innerHTML = `
+    <div class="sys-title">${title}</div>
+    ${rows.map(([l,v]) => `<div class="sys-row"><span class="lbl">${l}</span><span class="val">${v}</span></div>`).join('')}
+    ${actions ? `<div class="sys-actions">${actions.map(a => `<button class="sys-btn ${a.cls}" ${a.fn ? `onclick="${a.fn}"` : 'disabled'}>${a.label}</button>`).join('')}</div>` : ''}`;
+  feed.appendChild(card); scrollBottom();
+}
+
+function appendSystemText(text) {
+  const feed = document.getElementById('msgFeed');
+  const el = document.createElement('div'); el.className = 'date-div'; el.textContent = text;
+  feed.appendChild(el); scrollBottom();
+}
+
+function scrollBottom() { const f = document.getElementById('msgFeed'); f.scrollTop = f.scrollHeight; }
+
+/* ─── Send ───────────────────────────────────────────────────── */
+function sendMsg() {
+  // Send pending file attachments first
+  if (pendingFiles.length) {
+    pendingFiles.forEach(pf => sendAttachmentAsMsg(pf));
+    pendingFiles.length = 0;
+    document.getElementById('attachPreview').innerHTML = '';
+  }
+  const ci = document.getElementById('chatInput');
+  const content = ci.value.trim();
+  if (!content) return;
+
+  const fakeMsg = {
+    senderId: user.userId, senderName: user.name, content,
+    timestamp: new Date().toISOString(), roomId: wsRoom,
+  };
+  appendMsg(fakeMsg);
+  wsSend({ type: 'chat', roomId: wsRoom, content });
+  ci.value = ''; autoResize(ci);
+  document.getElementById('sendBtn').disabled = true;
+  stopTyping();
+}
+
+function sendAttachmentAsMsg(pf) {
+  if (pf.type === 'image') {
+    const url = pf.serverUrl || pf.dataUrl;
+    if (!url) return;
+    const msg = { senderId: user.userId, senderName: user.name, timestamp: new Date().toISOString(), imageUrl: url };
+    appendMsg(msg);
+    wsSend({ type: 'chat', roomId: wsRoom, imageUrl: url });
+  } else {
+    const msg = { senderId: user.userId, senderName: user.name, timestamp: new Date().toISOString(), fileUrl: '#', fileName: pf.name };
+    appendMsg(msg);
+    wsSend({ type: 'chat', roomId: wsRoom, content: `📎 ${pf.name}` });
+  }
+}
+
+/* ─── Attachment handling ────────────────────────────────────── */
+function addAttachments(files, hint) {
+  if (!files || !files.length) return;
+  Array.from(files).forEach(f => {
+    const type = (hint === 'auto') ? (f.type.startsWith('image/') ? 'image' : 'file') : hint;
+    if (type === 'image') {
+      const slot = { type: 'image', dataUrl: null, serverUrl: null, name: f.name };
+      // Upload to server immediately
+      const fd = new FormData(); fd.append('images', f);
+      fetch('/api/upload/images', { method: 'POST', headers: { 'Authorization': 'Bearer ' + user.token }, body: fd })
+        .then(r => r.json())
+        .then(json => { if (json.data && json.data.urls && json.data.urls[0]) slot.serverUrl = json.data.urls[0]; })
+        .catch(err => console.error('Image upload failed:', err));
+      // Local preview
+      const reader = new FileReader();
+      reader.onload = e => {
+        slot.dataUrl = e.target.result;
+        pendingFiles.push(slot);
+        renderAttachChip({ type: 'image', dataUrl: e.target.result, name: f.name });
+        document.getElementById('sendBtn').disabled = false;
+      };
+      reader.readAsDataURL(f);
+    } else {
+      pendingFiles.push({ type: 'file', name: f.name });
+      renderAttachChip({ type: 'file', name: f.name });
+      document.getElementById('sendBtn').disabled = false;
+    }
+  });
+}
+
+function renderAttachChip(pf) {
+  const prev = document.getElementById('attachPreview');
+  const chip = document.createElement('div'); chip.className = 'attach-chip';
+  const idx = pendingFiles.length - 1;
+  chip.innerHTML = pf.type === 'image'
+    ? `<img src="${pf.dataUrl}" alt="${escHtml(pf.name)}" /><span>${escHtml(pf.name)}</span><span class="remove-chip" onclick="removeChip(this,${idx})">✕</span>`
+    : `<span>📎 ${escHtml(pf.name)}</span><span class="remove-chip" onclick="removeChip(this,${idx})">✕</span>`;
+  prev.appendChild(chip);
+}
+
+function removeChip(btn, idx) {
+  pendingFiles.splice(idx, 1);
+  btn.closest('.attach-chip').remove();
+  if (!pendingFiles.length && !document.getElementById('chatInput').value.trim())
+    document.getElementById('sendBtn').disabled = true;
+}
+
+/* ─── Agreement panel ────────────────────────────────────────── */
+function updateAgreeTotal() {
+  const s = document.getElementById('agreeStart').value;
+  const e = document.getElementById('agreeEnd').value;
+  const p = parseFloat(document.getElementById('agreePrice').value) || 0;
+  const t = calcTotal(s, e, p);
+  document.getElementById('agreeTotal').textContent = t ? t + ' บาท' : '— บาท';
+}
+
+function updateSummary() {
+  document.getElementById('sumStart').textContent = thaiDate(rentalStart);
+  document.getElementById('sumEnd').textContent   = thaiDate(rentalEnd);
+  const d = daysBetween(rentalStart, rentalEnd);
+  document.getElementById('sumDays').textContent  = d > 0 ? `${d} วัน` : '—';
+  const t = calcTotal(rentalStart, rentalEnd, rentalPrice);
+  document.getElementById('sumTotal').textContent = t ? t + ' บาท' : '— บาท';
+}
+
+function proposeSchedule() {
+  const s = document.getElementById('agreeStart').value;
+  const e = document.getElementById('agreeEnd').value;
+  const p = parseFloat(document.getElementById('agreePrice').value) || rentalPrice;
+  const n = document.getElementById('agreeNote').value;
+  if (!s || !e || new Date(s) > new Date(e)) { alert('กรุณาเลือกวันที่ให้ถูกต้อง'); return; }
+
+  const id = 'prop-' + Date.now();
+  pendingProposalId = id;
+
+  // Show local "pending" card for the proposer — no accept buttons (can't accept own proposal)
+  renderProposalCard({ s, e, p, n, proposerName: user.name }, true, false, id);
+
+  // Broadcast structured proposal so the receiver sees an interactive card
+  const payload = '__PROPOSAL__' + JSON.stringify({ s, e, p, n, proposerName: user.name });
+  wsSend({ type: 'chat', roomId: wsRoom, content: payload });
+
+  document.getElementById('dealStatus').className = 'status-badge s1';
+  document.getElementById('dealStatus').textContent = '1️⃣ Request Pending';
+}
+
+function renderProposalCard(pd, isSelf, isLocked, id) {
+  const { s, e, n, proposerName } = pd;
+  const p = parseFloat(pd.p) || 0;
+  const d = daysBetween(s, e);
+  const t = calcTotal(s, e, p);
+  const sp = s.replace(/'/g, ''); const ep = e.replace(/'/g, '');
+
+  let actions;
+  if (isLocked) {
+    // Deal already done — read-only, no buttons
+    actions = null;
+  } else if (isSelf) {
+    actions = [{ label: '⏳ รอการยืนยันจากอีกฝ่าย', cls: 'pending-wait', fn: '' }];
+  } else {
+    actions = [
+      { label: '✅ ยอมรับ',    cls: 'accept',  fn: `acceptProposal(this,'${sp}','${ep}',${p})` },
+      { label: '❌ ปฏิเสธ',   cls: 'reject',  fn: 'rejectProposal(this)' },
+      { label: '✏️ เสนอใหม่', cls: 'counter', fn: 'openCounterProposal()' },
+    ];
+  }
+
+  appendSysCard({
+    title: `📤 ${escHtml(proposerName)} เสนอเงื่อนไขใหม่`,
+    rows: [
+      ['วันเริ่ม', thaiDate(s)],
+      ['วันสิ้นสุด', thaiDate(e)],
+      ['จำนวน', `${d} วัน`],
+      ['ราคา/วัน', `${p.toFixed(2)} บาท`],
+      ['ราคารวม', `${t} บาท`],
+      ...(n ? [['หมายเหตุ', escHtml(n)]] : []),
+    ],
+    actions,
+    id,
+  });
+}
+
+function acceptProposal(btn, s, e, p) {
+  /* Update state with accepted dates */
+  if (s) { rentalStart = s; rentalEnd = e; rentalPrice = parseFloat(p) || rentalPrice; }
+  /* Sync the agreement panel inputs */
+  document.getElementById('agreeStart').value = rentalStart;
+  document.getElementById('agreeEnd').value   = rentalEnd;
+  if (rentalPrice) document.getElementById('agreePrice').value = rentalPrice;
+  updateSummary();
+  updateAgreeTotal();
+  renderMiniCal(); renderRightCal();
+
+  /* Mark only this card's buttons as accepted */
+  const actions = btn ? btn.closest('.sys-actions') : null;
+  if (actions) actions.innerHTML = '<span style="font-size:13px;color:var(--green);font-weight:600">✅ ยอมรับวันที่ใหม่แล้ว</span>';
+
+  appendSystemText('✅ ยอมรับวันที่ใหม่แล้ว — รอเจ้าของกดยืนยันการเช่า');
+  document.getElementById('dealStatus').className = 'status-badge s2';
+  document.getElementById('dealStatus').textContent = '2️⃣ ตกลงวันที่แล้ว';
+  /* Broadcast date update so the other party's panel syncs */
+  wsSend({ type: 'chat', roomId: wsRoom, content: '__DATE_ACCEPTED__' + JSON.stringify({ s: rentalStart, e: rentalEnd, p: rentalPrice }) });
+}
+
+function rejectProposal(btn) {
+  const actions = btn.closest('.sys-actions');
+  actions.innerHTML = '<span style="font-size:13px;color:var(--red);font-weight:600">❌ ปฏิเสธแล้ว</span>';
+  appendSystemText('❌ ปฏิเสธเงื่อนไขการเช่า');
+  document.getElementById('dealStatus').className = 'status-badge error';
+  document.getElementById('dealStatus').textContent = '❌ Rejected';
+  wsSend({ type: 'chat', roomId: wsRoom, content: '❌ ฉันปฏิเสธเงื่อนไขที่เสนอมา — แนะนำให้เสนอใหม่' });
+}
+
+function openCounterProposal() {
+  document.querySelector('.right-body').scrollTo({ top: 0, behavior: 'smooth' });
+  document.getElementById('agreeStart').focus();
+  appendSystemText('✏️ กำลังเสนอเงื่อนไขใหม่...');
+}
+
+/* ─── QR Payment ─────────────────────────────────────────────── */
+function sendQR(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const total = calcTotal(rentalStart, rentalEnd, rentalPrice) || '—';
+    const qrDataUrl = ev.target.result;
+
+    // Show owner's local view immediately (no confirm button — owner is the sender)
+    renderQRCard({ qrUrl: qrDataUrl, total }, true);
+
+    // Upload QR to server then broadcast via WS so the renter sees the card
+    const fd = new FormData(); fd.append('images', file);
+    fetch('/api/upload/images', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + user.token },
+      body: fd
+    }).then(r => r.json()).then(json => {
+      const qrUrl = (json.data && json.data.urls && json.data.urls[0]) ? json.data.urls[0] : qrDataUrl;
+      wsSend({ type: 'chat', roomId: wsRoom, content: '__QR_PAYMENT__' + JSON.stringify({ qrUrl, total }) });
+    }).catch(() => {
+      wsSend({ type: 'chat', roomId: wsRoom, content: '__QR_PAYMENT__' + JSON.stringify({ qrUrl: qrDataUrl, total }) });
+    });
+
+    document.getElementById('dealStatus').className = 'status-badge s3';
+    document.getElementById('dealStatus').textContent = '3️⃣ Rental Active';
+    document.getElementById('qrFileInput').value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+/* Render QR payment card — ownerView=true shows waiting msg; false shows renter slip-attach UI */
+function renderQRCard(qd, ownerView) {
+  const qrUrl = qd.qrUrl || '';
+  const total  = qd.total || '—';
+  const feed = document.getElementById('msgFeed');
+  const card = document.createElement('div'); card.className = 'payment-card';
+
+  if (ownerView) {
+    card.innerHTML = `
+      <div class="pay-title">💳 ส่ง QR ชำระเงินแล้ว</div>
+      <div class="qr-wrap"><img src="${escHtml(qrUrl)}" alt="QR" onclick="openLightbox('${escHtml(qrUrl)}')" style="cursor:zoom-in" /></div>
+      <div class="pay-amount">${escHtml(String(total))} บาท</div>
+      <div class="pay-note" style="color:var(--amber)">⏳ รอผู้เช่าโอนเงินและแนบสลิปยืนยัน</div>`;
+  } else {
+    const cardId = 'qr-card-' + Date.now();
+    card.id = cardId;
+    card.innerHTML = `
+      <div class="pay-title">💳 QR ชำระเงิน</div>
+      <div class="qr-wrap"><img src="${escHtml(qrUrl)}" alt="QR" onclick="openLightbox('${escHtml(qrUrl)}')" style="cursor:zoom-in" /></div>
+      <div class="pay-amount">${escHtml(String(total))} บาท</div>
+      <div class="pay-note">สแกนและโอนเงินตามจำนวนที่ตกลง จากนั้นแนบสลิปยืนยันด้านล่าง</div>
+      <input type="file" id="slip-${cardId}" accept="image/*" style="display:none" onchange="confirmPaymentWithSlip(this,'${cardId}')" />
+      <button class="pay-confirm-btn" onclick="document.getElementById('slip-${cardId}').click()">📎 แนบสลิปยืนยันการชำระเงิน</button>`;
+  }
+  feed.appendChild(card); scrollBottom();
+}
+
+/* Called when renter selects a payment slip image */
+function confirmPaymentWithSlip(input, cardId) {
+  const file = input.files[0];
+  if (!file) return;
+  const card = document.getElementById(cardId);
+  const btn  = card ? card.querySelector('.pay-confirm-btn') : null;
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังอัพโหลดสลิป...'; }
+
+  const fd = new FormData(); fd.append('images', file);
+  fetch('/api/upload/images', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + user.token },
+    body: fd
+  }).then(r => r.json()).then(json => {
+    const slipUrl = (json.data && json.data.urls && json.data.urls[0]) ? json.data.urls[0] : null;
+    if (slipUrl) { afterSlipUploaded(card, slipUrl); return; }
+    throw new Error('no url');
+  }).catch(() => {
+    const reader = new FileReader();
+    reader.onload = e => afterSlipUploaded(card, e.target.result);
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function afterSlipUploaded(card, slipUrl) {
+  if (card) {
+    const existingBtn   = card.querySelector('.pay-confirm-btn');
+    const existingInput = card.querySelector('input[type="file"]');
+    if (existingBtn)   existingBtn.remove();
+    if (existingInput) existingInput.remove();
+    card.innerHTML += `
+      <div style="margin-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px;">สลิปการโอนเงิน</div>
+        <div class="qr-wrap" style="cursor:zoom-in;" onclick="openLightbox('${escHtml(slipUrl)}')">
+          <img src="${escHtml(slipUrl)}" alt="สลิป" />
+        </div>
+      </div>
+      <div style="margin-top:10px;text-align:center;color:var(--green);font-weight:700;font-size:14px;">✅ แนบสลิปแล้ว — รอเจ้าของยืนยัน</div>`;
+  }
+  document.getElementById('dealStatus').className = 'status-badge s4';
+  document.getElementById('dealStatus').textContent = '4️⃣ Rental Completed';
+  wsSend({ type: 'chat', roomId: wsRoom, imageUrl: slipUrl });
+  wsSend({ type: 'chat', roomId: wsRoom, content: '💰 ชำระเงินแล้ว — แนบสลิปการโอนให้ตรวจสอบด้านบน' });
+}
+
+/* ─── Confirm Rental (lender action) ────────────────────────── */
+async function confirmRental() {
+  // Note: ownership is enforced server-side (403). Button is already hidden for non-owners.
+  const s = document.getElementById('agreeStart').value || rentalStart;
+  const e = document.getElementById('agreeEnd').value   || rentalEnd;
+  const p = parseFloat(document.getElementById('agreePrice').value) || rentalPrice;
+  const n = document.getElementById('agreeNote').value;
+
+  if (!s || !e) { alert('กรุณาระบุวันเริ่มต้นและวันสิ้นสุดการเช่า'); return; }
+  if (new Date(s) > new Date(e)) { alert('วันเริ่มต้นต้องอยู่ก่อนหรือเท่ากับวันสิ้นสุด'); return; }
+
+  let renterUserId = parseInt(QP.renterId) || 0;
+  // Fallback: extract renterId from room name patterns:
+  //   dev-{deviceId}-u-{userId}
+  //   dev-{deviceId}-u-{userId}-req-{requestNo}
+  if (!renterUserId) {
+    const room = wsRoom || QP.room || '';
+    const m = room.match(/dev-\d+-u-(\d+)/);
+    if (m) renterUserId = parseInt(m[1]) || 0;
+  }
+  if (!renterUserId) {
+    alert('ไม่พบข้อมูลผู้เช่า — กรุณาเปิดหน้าแชทจากลิงก์ที่มี renterId');
+    return;
+  }
+  if (!deviceId) {
+    alert('ไม่พบ deviceId — กรุณาเปิดหน้าแชทใหม่จากหน้าอุปกรณ์');
+    return;
+  }
+  if (!confirm('ยืนยันการเช่าอุปกรณ์นี้? ระบบจะบันทึกข้อมูลลงฐานข้อมูลทันที')) return;
+
+  const btn = document.getElementById('confirmRentalBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังบันทึก...';
+
+  const _token = localStorage.getItem('access_token');
+  if (!_token) {
+    alert('กรุณาเข้าสู่ระบบก่อน');
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันการเช่า (เจ้าของ)';
+    return;
+  }
+
+  try {
+    const totalPrice = parseFloat(calcTotal(s, e, p) || '0');
+    const res = await fetch('/api/chat/confirm-rental', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + _token,
+      },
+      body: JSON.stringify({
+        deviceNo:     deviceId,
+        renterUserId: renterUserId,
+        startDate:    s,
+        endDate:      e,
+        totalPrice:   totalPrice,
+        note:         n,
+      }),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์');
+    }
+
+    /* ─── บันทึกสำเร็จ: แสดง confirmed card ─── */
+    dealConfirmed = true;
+    rentalStart = s; rentalEnd = e; rentalPrice = p;
+    updateSummary();
+
+    const d = daysBetween(s, e);
+    const t = calcTotal(s, e, p);
+    const isRentedNow = s <= new Date().toISOString().slice(0, 10);
+    const deviceStatusLabel = isRentedNow ? '🔴 Rented' : '🟡 Reserved';
+    const feed = document.getElementById('msgFeed');
+    const card = document.createElement('div'); card.className = 'confirmed-card';
+    card.innerHTML = `
+      <div class="conf-icon">🎉</div>
+      <h3>การเช่าได้รับการยืนยัน!</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:4px">บันทึกข้อมูลในระบบเรียบร้อยแล้ว</p>
+      <div class="conf-rows">
+        <div class="conf-row"><span class="lbl">อุปกรณ์</span><span class="val">${escHtml(deviceName)}</span></div>
+        <div class="conf-row"><span class="lbl">วันเริ่ม</span><span class="val">${thaiDate(s)}</span></div>
+        <div class="conf-row"><span class="lbl">วันสิ้นสุด</span><span class="val">${thaiDate(e)}</span></div>
+        <div class="conf-row"><span class="lbl">จำนวน</span><span class="val">${d} วัน</span></div>
+        <div class="conf-row"><span class="lbl">ราคารวม</span><span class="val">${t} บาท</span></div>
+        ${n ? `<div class="conf-row"><span class="lbl">หมายเหตุ</span><span class="val">${escHtml(n)}</span></div>` : ''}
+        <div class="conf-row"><span class="lbl">สถานะอุปกรณ์</span><span class="val">${deviceStatusLabel}</span></div>
+        <div class="conf-row"><span class="lbl">เลขที่รายการ</span><span class="val">#${json.data.requestNo}</span></div>
+        <div class="conf-row"><span class="lbl">เลข Schedule</span><span class="val">#${json.data.scheduleNo}</span></div>
+        <div class="conf-row"><span class="lbl">เลข RentBill</span><span class="val">#${json.data.rentingNo}</span></div>
+      </div>`;
+    feed.appendChild(card); scrollBottom();
+
+    document.getElementById('dealStatus').className = 'status-badge s2';
+    document.getElementById('dealStatus').textContent = '2️⃣ Booking Confirmed';
+
+    lockChat();
+    wsSend({ type: 'chat', roomId: wsRoom, content: '__CONFIRMED__' });
+    wsSend({ type: 'chat', roomId: wsRoom, content: `🎉 การเช่าได้รับการยืนยันแล้ว! ${thaiDate(s)} → ${thaiDate(e)} รวม ${t} บาท | เลขที่: #${json.data.requestNo} | สถานะอุปกรณ์: ${deviceStatusLabel}` });
+
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '✅ ยืนยันการเช่า (เจ้าของ)';
+    alert('เกิดข้อผิดพลาด: ' + err.message);
+  }
+}
+
+/* ─── Mini calendar builder ──────────────────────────────────── */
+function buildCal(containerId, start, end) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  const s = start ? new Date(start + 'T00:00:00') : null;
+  const e = end   ? new Date(end   + 'T00:00:00') : null;
+  const now = s || new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+
+  const header = document.createElement('div'); header.className = 'cal-header';
+  const thMonths = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  header.innerHTML = `<div class="cal-month">${thMonths[month]} ${year + 543}</div>`;
+  container.appendChild(header);
+
+  const grid = document.createElement('div'); grid.className = 'cal-grid';
+  ['อา','จ','อ','พ','พฤ','ศ','ส'].forEach(d => {
+    const h = document.createElement('div'); h.className = 'cal-day-header'; h.textContent = d; grid.appendChild(h);
+  });
+
+  const firstDay = new Date(year, month, 1).getDay();
+  for (let i = 0; i < firstDay; i++) {
+    const em = document.createElement('div'); em.className = 'cal-day empty'; grid.appendChild(em);
+  }
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cell = document.createElement('div'); cell.className = 'cal-day';
+    const cur = new Date(year, month, d);
+    cell.textContent = d;
+    const isToday = sameDay(cur, today);
+    const inRange = s && e && cur >= s && cur <= e;
+    const isStart = s && sameDay(cur, s);
+    const isEnd   = e && sameDay(cur, e);
+    if (isStart || isEnd) cell.classList.add(isStart ? 'rental-start' : 'rental-end');
+    else if (inRange) cell.classList.add('rental');
+    if (isToday) cell.classList.add('today');
+    grid.appendChild(cell);
+  }
+  container.appendChild(grid);
+}
+
+function renderMiniCal() { buildCal('miniCal', rentalStart, rentalEnd); }
+function renderRightCal() {
+  const s = document.getElementById('agreeStart').value;
+  const e = document.getElementById('agreeEnd').value;
+  buildCal('rightCal', s, e);
+}
+
+/* ─── UI helpers ─────────────────────────────────────────────── */
+function setConn(state, label) {
+  document.getElementById('connDot').className   = `conn-dot ${state}`;
+  document.getElementById('connText').textContent = label;
+}
+function enableInput(on) {
+  document.getElementById('chatInput').disabled = !on;
+  if (!on) document.getElementById('sendBtn').disabled = true;
+}
+
+/* Lock negotiation controls after deal is accepted */
+function lockProposals() {
+  ['agreeStart','agreeEnd','agreePrice','agreeNote'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.disabled = true;
+  });
+  const p = document.querySelector('.btn-propose');
+  if (p) { p.disabled = true; p.style.opacity = '.45'; }
+  const c = document.getElementById('confirmRentalBtn');
+  if (c) { c.disabled = true; c.style.opacity = '.45'; }
+  const q = document.querySelector('.btn-send-qr');
+  if (q) { q.disabled = true; q.style.opacity = '.45'; }
+}
+
+/* Lock entire chat (after final confirmation) */
+function lockChat() {
+  lockProposals();
+  enableInput(false);
+  const wrap = document.querySelector('.input-wrap');
+  if (wrap && !document.getElementById('chatLockedNotice')) {
+    const notice = document.createElement('div');
+    notice.id = 'chatLockedNotice';
+    notice.style.cssText = 'padding:14px;text-align:center;color:var(--muted);font-size:13px;font-weight:600;letter-spacing:.02em;';
+    notice.textContent = '🔒 การเจรจาเสร็จสิ้น — ห้องแชทนี้ปิดแล้ว';
+    wrap.replaceWith(notice);
+  }
+}
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 100) + 'px'; }
+
+/* ─── Lightbox ───────────────────────────────────────────────── */
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.getElementById('lightboxImg').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+</script>
+</body>
+</html>

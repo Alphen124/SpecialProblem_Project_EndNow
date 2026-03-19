@@ -1,0 +1,243 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Devices</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/">หน้าแรก</a>
+        <a href="/features/devices/devices.html" class="active">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html">จัดการอุปกรณ์</a>
+        <a href="/features/devices/devicehistory.html">ประวัติการยืม</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="renttype-page" style="padding-top:48px;">
+      <div class="container" style="text-align:center;">
+        <h1 id="deviceHeader" style="font-size:56px;margin-bottom:28px;font-weight:700;color:#111;">Search Result</h1>
+
+        <div id="searchFilters" class="result-filters hidden" aria-label="Filters">
+          <select id="filterRentBorrow" class="filter-select" aria-label="Rent or Borrow">
+            <option value="all">Rent / Borrow</option>
+            <option value="rent">Rent</option>
+            <option value="borrow">Borrow</option>
+          </select>
+
+          <select id="filterDeviceType" class="filter-select" aria-label="Device type">
+            <option value="all">Device type</option>
+            <option value="notebook">Notebook</option>
+            <option value="tablet">Tablet</option>
+            <option value="others">Others</option>
+          </select>
+        </div>
+
+        <div id="results" class="renttype-grid" style="margin-top:20px;">
+          <!-- results will be rendered here -->
+        </div>
+      </div>
+    </section>
+  </main>
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script src="/js/navpopups.js"></script>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = 'f/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+
+  <script>
+    // get type from query string
+    function getQueryParam(name){
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    const type = (getQueryParam('type') || 'all').toLowerCase();
+    const deviceHeader = document.getElementById('deviceHeader');
+    const results = document.getElementById('results');
+    // if search mode, use query term as header; otherwise set header to device type name
+    const q = getQueryParam('q') || '';
+    let typeLabel = '';
+    if(type === 'search' && q.trim()){
+      typeLabel = q;
+    } else {
+      typeLabel = type === 'others' ? 'Others' : (type.charAt(0).toUpperCase() + type.slice(1));
+    }
+    deviceHeader.textContent = typeLabel;
+
+    // sample items per type (demo)
+    const samples = {
+      notebook: [
+        { id:1, name:'MacBook Pro 13"', price:'$45', lessor:'Jane Doe' },
+        { id:2, name:'Dell XPS 13', price:'$55', lessor:'Alice Lee' }
+      ],
+      tablet: [
+        { id:3, name:'iPad Air', price:'$30', lessor:'Bob Kim' },
+        { id:4, name:'Galaxy Tab', price:'$28', lessor:'Siri' }
+      ],
+      others: [
+        { id:5, name:'GoPro Hero', price:'$20', lessor:'Tom' },
+        { id:6, name:'Projector', price:'$40', lessor:'Lina' }
+      ]
+    };
+
+    // borrow-side samples (to include when searching so results show both renting and borrowing)
+    const borrowSamples = {
+      notebook: [
+        { id:101, name:'MacBook Pro 13"', lessor:'CSKMITL', source:'borrow' },
+        { id:102, name:'Dell XPS 13', lessor:'CSKMITL', source:'borrow' }
+      ],
+      tablet: [
+        { id:103, name:'iPad Air', lessor:'CSKMITL', source:'borrow' },
+        { id:104, name:'Galaxy Tab', lessor:'CSKMITL', source:'borrow' }
+      ],
+      others: [
+        { id:105, name:'GoPro Hero', lessor:'CSKMITL', source:'borrow' },
+        { id:106, name:'Projector', lessor:'CSKMITL', source:'borrow' }
+      ]
+    };
+
+    function deviceTypeOf(item){
+      const borrow = item && item.source === 'borrow';
+      const datasets = borrow ? borrowSamples : samples;
+      for(const [k, arr] of Object.entries(datasets)){
+        if(arr && arr.some(x => x && x.id === item.id)) return k;
+      }
+      return 'others';
+    }
+
+    function buildBaseItems(){
+      if(type === 'search'){
+        const allRent = [].concat(...Object.values(samples));
+        const allBorrow = [].concat(...Object.values(borrowSamples));
+        const all = allRent.concat(allBorrow);
+        const ql = q.toLowerCase();
+        return all.filter(it => it.name.toLowerCase().includes(ql) || it.lessor.toLowerCase().includes(ql));
+      }
+
+      // For non-search (Try Renting browsing), show RENT devices only.
+      return samples[type] || [];
+    }
+
+  let items = buildBaseItems();
+
+    function renderCard(item, idx){
+      const card = document.createElement('article');
+      card.className = 'result-card';
+      const isBorrow = item.source === 'borrow';
+
+      const priceRow = (!isBorrow && item.price)
+        ? `<div class="meta small">Price · ${item.price}</div>`
+        : '';
+
+      card.innerHTML = `
+        <div class="card-media-large" aria-hidden></div>
+        <div class="card-content">
+          <h3 class="device-name">${item.name}</h3>
+          ${priceRow}
+          <div class="card-divider"></div>
+          <div class="card-footer">
+            <div class="avatar" aria-hidden></div>
+            <div class="lessee">
+              <div class="lessee-name">${item.lessor}</div>
+            </div>
+          </div>
+        </div>
+      `;
+      if(isBorrow){
+        card.style.background = 'var(--primary)';
+        card.style.color = '#fff';
+
+        const borrowTextEls = card.querySelectorAll('.device-name, .meta.small, .lessee-name');
+        borrowTextEls.forEach(el => { el.style.color = '#fff'; });
+      }
+      // make card keyboard + mouse clickable to open renting page
+      card.tabIndex = 0;
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', ()=>{
+        const url = isBorrow ? ('/features/devices/borrowdevice.html?id='+encodeURIComponent(item.id)+'&name='+encodeURIComponent(item.name)) : ('/features/devices/searchdevice.html?id='+encodeURIComponent(item.id)+'&name='+encodeURIComponent(item.name));
+        window.location.href = url;
+      });
+      card.addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ e.preventDefault(); card.click(); } });
+      return card;
+    }
+
+    function renderList(list, emptyMsg){
+      results.innerHTML = '';
+      if(!Array.isArray(list) || list.length === 0){
+        results.innerHTML = emptyMsg;
+        return;
+      }
+      list.forEach(it => results.appendChild(renderCard(it)));
+    }
+
+    function applyFilters(){
+      const rentBorrowSelect = document.getElementById('filterRentBorrow');
+      const deviceTypeSelect = document.getElementById('filterDeviceType');
+
+      const rentBorrow = (rentBorrowSelect && rentBorrowSelect.value) ? rentBorrowSelect.value : 'all';
+      const deviceType = (deviceTypeSelect && deviceTypeSelect.value) ? deviceTypeSelect.value : 'all';
+
+      const base = buildBaseItems();
+      const filtered = base.filter(it => {
+        const isBorrow = it.source === 'borrow';
+        if(rentBorrow === 'rent' && isBorrow) return false;
+        if(rentBorrow === 'borrow' && !isBorrow) return false;
+
+        if(deviceType !== 'all') return deviceTypeOf(it) === deviceType;
+        return true;
+      });
+
+      renderList(filtered, '<p>No devices found for this filter.</p>');
+    }
+
+    // Filters only on search results.
+    if(type === 'search'){
+      const filtersWrap = document.getElementById('searchFilters');
+      filtersWrap && filtersWrap.classList.remove('hidden');
+      const rentBorrowSelect = document.getElementById('filterRentBorrow');
+      const deviceTypeSelect = document.getElementById('filterDeviceType');
+      rentBorrowSelect && rentBorrowSelect.addEventListener('change', applyFilters);
+      deviceTypeSelect && deviceTypeSelect.addEventListener('change', applyFilters);
+      applyFilters();
+    } else {
+      renderList(items, '<p>No devices found for this type.</p>');
+    }
+  </script>
+</body>
+</html>

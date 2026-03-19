@@ -1,0 +1,264 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Borrow Device</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+  <style>
+    /* Use the same layout as rentdevice but hide price for borrow flow */
+    .price{ display:none; }
+    .rent-device { display:flex; gap:48px; padding:48px 0; justify-content:center; align-items:flex-start; max-width:1200px; margin:0 auto; }
+    .device-gallery { flex:0 0 720px; background:#C4DEFD; height:480px; border-radius:6px; }
+    .device-thumbs { display:flex; gap:16px; margin-top:16px; }
+    .thumb { width:220px; height:188px; background:#C4DEFD; border-radius:6px; }
+    .details-left { max-width:724px; }
+    .device-info { flex:1; max-width:540px; }
+    .device-info h1 { font-size:40px; margin:0 0 8px; }
+    .date-buttons { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .date-buttons button{ padding:10px 18px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer }
+    .date-buttons button.selected{ background:#111; color:#fff; border-color:#111 }
+    .time-row { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    .time-row select { padding:10px;border-radius:8px;border:1px solid #ccc }
+    .add-cart { display:inline-block; padding:18px 34px; background:#000;color:#fff;border-radius:8px;text-decoration:none; }
+    .favorite { border:1px solid #ddd; background:#fff; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:18px }
+    .favorite.active { color:#D00; border-color:#D00 }
+    .meta-small { color:#666; margin-bottom:8px }
+    .mini-cart { background:transparent; z-index:9999; }
+    .mini-cart .mini-cart-inner { width:320px; box-shadow:0 6px 24px rgba(0,0,0,0.12); background:#fff; border-radius:8px; padding:12px; }
+    .mini-cart .mini-cart-close { float:right; border:0; background:transparent; font-size:20px; cursor:pointer }
+    .mini-item { display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid #f2f2f2 }
+    .mini-item .mini-name { font-weight:600 }
+    .mini-meta { font-size:12px; color:#666 }
+    .mini-cart-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:8px }
+    .mini-cart.hidden{ display:none }
+  </style>
+</head>
+<body>
+  <!-- copy of rentdevice page layout, with price hidden by CSS -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/">หน้าแรก</a>
+        <a href="/features/devices/devices.html" class="active">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html">จัดการอุปกรณ์</a>
+        <a href="/features/devices/devicehistory.html">ประวัติการยืม</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="container" style="padding-top:48px;">
+      <div id="rentWrap" class="rent-device">
+        <div>
+          <div class="device-gallery" id="mainImage" aria-hidden></div>
+          <div class="device-thumbs">
+            <div class="thumb" aria-hidden></div>
+            <div class="thumb" aria-hidden></div>
+            <div class="thumb" aria-hidden></div>
+          </div>
+
+          <div class="details-left" style="margin-top:24px;">
+            <h3>Details</h3>
+            <p id="details">Description, specification, pick up and return location. <span style="color:#D00">*Fine if return late*</span></p>
+
+            <!-- reviews removed for borrow flow -->
+          </div>
+        </div>
+
+        <div class="device-info">
+          <div class="meta-small" id="brandName">Brand Name</div>
+          <h1 id="deviceName">Device Name</h1>
+          <div class="meta-small" id="reviews">★★★★★ 42 reviews</div>
+          <div class="price" id="devicePrice">10.00 Baht/day</div>
+
+          <div class="date-buttons" id="dateButtons"></div>
+
+          <div class="time-row">
+            <div>
+              <label for="pickup">Pick up time</label><br>
+              <select id="pickup"></select>
+            </div>
+            <div>
+              <label for="returnt">Return time</label><br>
+              <select id="returnt"></select>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;display:flex;align-items:center;gap:12px;justify-content:flex-start;">
+            <a id="addCartBtn" class="add-cart" href="#">Make a request</a>
+            <button id="favoriteBtn" class="favorite" aria-pressed="false" title="Add to favorites">♡</button>
+            <span style="display:inline-block;width:18px"></span>
+            <span id="remaining" class="meta-small">Remaining 10</span>
+          </div>
+
+          <div id="ratingSummary" style="margin-top:30px;text-align:right;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script>
+    // read query params
+    function getQueryParam(name){ const url = new URL(window.location.href); return url.searchParams.get(name); }
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    const id = getQueryParam('id');
+    const name = getQueryParam('name') || 'Device Name';
+
+    // Hide favorite button for admin-created devices
+    if (getQueryParam('isAdmin') === '1') {
+      var favBtn = document.getElementById('favoriteBtn');
+      if (favBtn) favBtn.style.display = 'none';
+    } else if (id) {
+      // Fetch device to check isAdminDevice
+      (function() {
+        const token = localStorage.getItem('access_token');
+        fetch('http://localhost:3001/api/devices/' + encodeURIComponent(id), {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        }).then(function(r){ return r.json(); }).then(function(json){
+          const d = json.data || json;
+          if (d.isAdminDevice) {
+            var btn = document.getElementById('favoriteBtn');
+            if (btn) btn.style.display = 'none';
+          }
+        }).catch(function(){});
+      })();
+    }
+
+    document.getElementById('deviceName').textContent = decodeURIComponent(name);
+    document.getElementById('devicePrice').textContent = '';
+    document.getElementById('brandName').textContent = 'Brand Name';
+    document.getElementById('details').textContent = 'Description and specification for ' + decodeURIComponent(name) + '. Location to pick up and return.';
+
+    // header search toggle (show input in navbar)
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', (e)=>{ e.preventDefault(); const q = headerSearchInput && headerSearchInput.value; if(q) { window.location.href = '/borrowtypedevice?type=search&q='+encodeURIComponent(q); } hideSearch(); });
+    })();
+
+    // populate sample date buttons and make them selectable (single-select)
+    const dateButtons = document.getElementById('dateButtons');
+    const sampleDates = ['8 ต.ค.','9 ต.ค.','10 ต.ค.','11 ต.ค.'];
+    const selectedDateButtons = [];
+    sampleDates.forEach(d=>{
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = d; b.className = 'date-btn';
+      b.addEventListener('click', ()=>{
+        if(b.classList.contains('selected')){ b.classList.remove('selected'); const idx = selectedDateButtons.indexOf(b); if(idx !== -1) selectedDateButtons.splice(idx,1); }
+        else { if(selectedDateButtons.length >= 2){ const first = selectedDateButtons.shift(); first.classList.remove('selected'); } selectedDateButtons.push(b); b.classList.add('selected'); }
+      });
+      dateButtons.appendChild(b);
+    });
+
+    // populate time options from 06:00 to 18:00 (hourly)
+    function populateTimes(sel){ for(let h=6; h<=18; h++){ const hh = String(h).padStart(2,'0')+':00'; const opt = document.createElement('option'); opt.value = hh; opt.textContent = hh; sel.appendChild(opt); } }
+    populateTimes(document.getElementById('pickup'));
+    populateTimes(document.getElementById('returnt'));
+
+    // CART + FAV demo functions (reuse localStorage keys)
+    const CART_KEY = 'notelet_cart_v1';
+    const FAV_KEY = 'notelet_favs_v1';
+    const HISTORY_KEY = 'notelet_history_v1';
+    function getCart(){ try{ return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }catch(e){ return []; } }
+    function saveCart(cart){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); }
+    function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); }catch(e){ return []; } }
+    function saveFavs(list){ localStorage.setItem(FAV_KEY, JSON.stringify(list)); }
+    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; } }
+    function saveHistory(history){ localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+    function addCartToHistory(items){
+      const history = getHistory();
+      const now = new Date().toISOString();
+      (items || []).forEach((it)=>{
+        const source = it?.source || 'borrow';
+        history.push({
+          ...it,
+          source,
+          status: it?.status || 'Completed',
+          location: it?.location || 'Pick up or return Location',
+          lessor: it?.lessor || (source === 'borrow' ? 'ComSci, KMITL' : 'Lessor Name'),
+          completedAt: now,
+        });
+      });
+      saveHistory(history);
+    }
+
+    // simple mini-cart rendering
+    function renderMiniCart(){ const popup = document.getElementById('miniCartPopup'); const itemsWrap = document.getElementById('miniCartItems'); const totalEl = document.getElementById('miniCartTotal'); const cart = getCart(); itemsWrap && (itemsWrap.innerHTML=''); let total=0; let hasPriced=false; if(!itemsWrap) return; if(cart.length===0){ itemsWrap.innerHTML='<div class="mini-empty">Cart is empty</div>'; } cart.forEach((it,idx)=>{ const row=document.createElement('div'); row.className='mini-item'; const isBorrow = (it && (it.source === 'borrow')) || (!it?.source && (it?.price === '' || it?.price == null) && (typeof it?.total === 'number') && it.total === 0);
+      const priceDisplay = (!isBorrow && typeof it.total === 'number') ? (it.total.toFixed(2)+' Baht') : (!isBorrow ? escapeHtml(it.price||'') : '');
+      let metaText=''; try{ const dates=(it.date||'').split(' - ').map(s=>s.trim()).filter(Boolean); if(dates.length===1){ metaText = `${dates[0]} ${it.pickup||''} - ${it.returnt||''}` } else if(dates.length>=2){ metaText = `${dates[0]} ${it.pickup||''} - ${dates[1]} ${it.returnt||''}` } else { metaText = `${it.pickup||''} - ${it.returnt||''}` } }catch(e){ metaText = `${escapeHtml(it.date||'')} ${escapeHtml(it.pickup||'')}` }
+      const priceHtml = priceDisplay ? (priceDisplay + ' ') : '';
+      row.innerHTML = `<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(metaText)}</div></div><div class="mini-item-right">${priceHtml}<button class="mini-delete" data-idx="${idx}" aria-label="Delete">Delete</button></div>`;
+      itemsWrap.appendChild(row);
+      if(!isBorrow){ hasPriced=true; total += (typeof it.total === 'number') ? it.total : (parseFloat(String(it.price||0).replace(/[^0-9\\.]/g,''))||0); }
+    }); totalEl && (totalEl.textContent = (cart.length && hasPriced) ? ('Total '+total.toFixed(2)+' Baht') : ''); itemsWrap.querySelectorAll('.mini-delete').forEach(btn=>{ btn.addEventListener('click', ()=>{ const i = parseInt(btn.getAttribute('data-idx'),10); const c = getCart(); if(!isNaN(i) && i>=0 && i<c.length){ const removed = c.splice(i,1)[0]; saveCart(c); renderMiniCart(); const newCart=getCart(); if(Array.isArray(newCart) && newCart.length===0) showMiniCartAtAnchor(false); } }); }); }
+
+    function showMiniCartAtAnchor(show){ const popup = document.getElementById('miniCartPopup'); const anchor = document.getElementById('headerCartBtn'); if(!popup||!anchor) return; if(show){ renderMiniCart(); const rect = anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left=(rect.left)+'px'; popup.style.top=(rect.bottom+8+window.scrollY)+'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); } }
+
+    // ensure mini cart popup elements exist; create simple structure if missing
+    if(!document.getElementById('miniCartPopup')){
+      const c = document.createElement('div'); c.id='miniCartPopup'; c.className='mini-cart hidden'; c.innerHTML = '<div class="mini-cart-inner"><button id="miniCartClose" class="mini-cart-close">✕</button><div id="miniCartItems"></div><div class="mini-cart-footer"><div id="miniCartTotal"></div><button id="miniCartCheckout" class="btn btn-cta">Check out</button></div></div>';
+      document.body.appendChild(c);
+    }
+    document.body.addEventListener('click',(e)=>{ if(e.target && e.target.id === 'headerCartBtn'){ e.preventDefault(); const p = document.getElementById('miniCartPopup'); if(p.classList.contains('hidden')) showMiniCartAtAnchor(true); else showMiniCartAtAnchor(false); } });
+    document.addEventListener('click', (e)=>{ const popup=document.getElementById('miniCartPopup'); if(popup && !popup.contains(e.target) && e.target.id !== 'headerCartBtn' && !e.target.closest('#miniCartPopup')) showMiniCartAtAnchor(false); });
+    document.addEventListener('click',(e)=>{ if(e.target && e.target.id === 'headerFavBtn'){ e.preventDefault(); const p=document.getElementById('miniFavPopup'); if(p && p.classList.contains('hidden')) showMiniFavAtAnchor(true); else showMiniFavAtAnchor(false); } });
+
+    function renderMiniFav(){ const popup=document.getElementById('miniFavPopup'); const itemsWrap=document.getElementById('miniFavItems'); const countEl=document.getElementById('miniFavCount'); const favs=getFavs(); if(!itemsWrap) return; itemsWrap.innerHTML=''; if(favs.length===0) itemsWrap.innerHTML='<div class="mini-empty">No favorites</div>'; favs.forEach((it,idx)=>{ const row=document.createElement('div'); row.className='mini-item'; row.innerHTML=`<div class="mini-item-left"><div class="mini-name">${escapeHtml(it.name)}</div><div class="mini-meta">${escapeHtml(it.detail||'')}</div></div><div class="mini-item-right"><button class="mini-fav-delete" data-idx="${idx}" aria-label="Remove">Remove</button></div>`; itemsWrap.appendChild(row); }); countEl && (countEl.textContent = favs.length ? (favs.length+' favorites') : ''); itemsWrap.querySelectorAll('.mini-fav-delete').forEach(btn=>{ btn.addEventListener('click', ()=>{ const i=parseInt(btn.getAttribute('data-idx'),10); const f=getFavs(); if(!isNaN(i) && i>=0 && i<f.length){ f.splice(i,1); saveFavs(f); renderMiniFav(); if(f.length===0) showMiniFavAtAnchor(false); } }); }); }
+
+    function showMiniFavAtAnchor(show){ const popup=document.getElementById('miniFavPopup'); const anchor=document.getElementById('headerFavBtn'); if(!popup||!anchor) return; if(show){ renderMiniFav(); const rect=anchor.getBoundingClientRect(); popup.style.position='absolute'; popup.style.left=(rect.left)+'px'; popup.style.top=(rect.bottom+8+window.scrollY)+'px'; popup.classList.remove('hidden'); popup.setAttribute('aria-hidden','false'); } else { popup.classList.add('hidden'); popup.setAttribute('aria-hidden','true'); } }
+
+    if(!document.getElementById('miniFavPopup')){
+      const f = document.createElement('div'); f.id='miniFavPopup'; f.className='mini-cart hidden'; f.innerHTML = '<div class="mini-cart-inner"><button id="miniFavClose" class="mini-cart-close">✕</button><div id="miniFavItems"></div><div class="mini-cart-footer"><div id="miniFavCount"></div></div></div>';
+      document.body.appendChild(f);
+    }
+    document.getElementById('miniCartClose')?.addEventListener('click', ()=> showMiniCartAtAnchor(false));
+    document.getElementById('miniFavClose')?.addEventListener('click', ()=> showMiniFavAtAnchor(false));
+
+    // open confirm dialog on checkout (create if missing)
+    if(!document.getElementById('confirmDialog')){
+      const dlg = document.createElement('div'); dlg.id='confirmDialog'; dlg.className='hidden'; dlg.innerHTML = '<div style="position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><div style="background:#fff;padding:20px;border-radius:10px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.16);"><h3>Confirm request</h3><p>Do you want to submit the request?</p><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;"><button id="confirmNo" class="btn btn-ghost">No</button><button id="confirmYes" class="btn btn-primary">Yes</button></div></div></div>';
+      document.body.appendChild(dlg);
+    }
+    document.getElementById('miniCartCheckout')?.addEventListener('click', ()=>{ const dlg=document.getElementById('confirmDialog'); if(!dlg) return; dlg.classList.remove('hidden'); dlg.setAttribute('aria-hidden','false'); });
+    document.getElementById('confirmNo')?.addEventListener('click', ()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); });
+    document.getElementById('confirmYes')?.addEventListener('click', ()=>{ const dlg=document.getElementById('confirmDialog'); dlg.classList.add('hidden'); dlg.setAttribute('aria-hidden','true'); const cart = getCart(); addCartToHistory(cart); saveCart([]); renderMiniCart(); showMiniCartAtAnchor(false); });
+
+    // wire favorites toggle
+    document.getElementById('favoriteBtn').addEventListener('click', ()=>{
+      const favs = getFavs(); const idx = favs.findIndex(f=>String(f.id) === String(id)); if(idx !== -1){ favs.splice(idx,1); saveFavs(favs); renderMiniFav(); document.getElementById('favoriteBtn').setAttribute('aria-pressed','false'); } else { favs.push({ id: id || Date.now(), name: decodeURIComponent(name), detail: document.getElementById('details')?.textContent || '' }); saveFavs(favs); renderMiniFav(); showMiniFavAtAnchor(true); document.getElementById('favoriteBtn').setAttribute('aria-pressed','true'); } });
+
+    // wire add request (demo): add to cart and show popup
+    document.getElementById('addCartBtn').addEventListener('click', (e)=>{
+      e.preventDefault(); const selectedDates = selectedDateButtons.map(b=>b.textContent); const pickup = document.getElementById('pickup').value; const returnt = document.getElementById('returnt').value; if(selectedDates.length < 1){ alert('Please select at least one date (start date).'); return; } if(!pickup || !returnt){ alert('Please select both pick up and return times.'); return; }
+      let days = 1; if(selectedDates.length >= 2){ const i1 = sampleDates.indexOf(selectedDates[0]); const i2 = sampleDates.indexOf(selectedDates[1]); if(i1>=0 && i2>=0){ days = Math.abs(i2-i1)+1; } }
+      const pricePerDay = 0; const totalPrice = days * pricePerDay; const cart = getCart(); const item = { id: id || Date.now(), source: 'borrow', name: decodeURIComponent(name), price: '', days, total: totalPrice, date: selectedDates.join(' - '), pickup, returnt, status: 'Requested', location: 'Pick up or return Location', lessor: 'ComSci, KMITL' }; cart.push(item); saveCart(cart); renderMiniCart(); showMiniCartAtAnchor(true);
+    });
+
+    // reposition visible popups on scroll/resize so they follow the navbar
+    function repositionPopups(){ try{ const cartPopup = document.getElementById('miniCartPopup'); if(cartPopup && !cartPopup.classList.contains('hidden')) showMiniCartAtAnchor(true); const favPopup = document.getElementById('miniFavPopup'); if(favPopup && !favPopup.classList.contains('hidden')) showMiniFavAtAnchor(true); }catch(e){} }
+    window.addEventListener('scroll', repositionPopups); window.addEventListener('resize', repositionPopups);
+  </script>
+  <script src="/js/navpopups.js"></script>
+</body>
+</html>

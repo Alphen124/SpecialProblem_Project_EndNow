@@ -1,0 +1,1856 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — จัดการอุปกรณ์</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat-notifications.js"></script>
+  <style>
+    .rentout-card { cursor:pointer; transition:transform .2s,box-shadow .2s; }
+    .rentout-card:hover { transform:translateY(-4px); box-shadow:0 8px 16px rgba(0,0,0,.1); }
+
+    /* Page tabs */
+    .page-tabs { display:flex; gap:8px; margin-bottom:28px; border-bottom:2px solid #e8ecf4; padding-bottom:0; }
+    .page-tab {
+      padding:10px 22px; font-size:14px; font-weight:600; color:#666; background:none;
+      border:none; border-bottom:3px solid transparent; margin-bottom:-2px;
+      cursor:pointer; transition:color .2s,border-color .2s;
+    }
+    .page-tab.active { color:#043873; border-bottom-color:#043873; }
+    .page-tab .badge {
+      display:inline-block; background:#ef4444; color:#fff;
+      font-size:11px; font-weight:700; padding:1px 7px; border-radius:20px; margin-left:6px;
+    }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+
+    /* Request Bill Cards */
+    .request-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+      gap:20px; margin-top:8px;
+    }
+    .request-card {
+      background:#fff; border-radius:14px; padding:20px;
+      box-shadow:0 2px 10px rgba(4,56,115,.07);
+      border-left:4px solid #e8ecf4;
+    }
+    .request-card.request-pending   { border-left-color:#f59e0b; }
+    .request-card.booking-confirmed  { border-left-color:#22c55e; }
+    .request-card.rental-active      { border-left-color:#3b82f6; }
+    .request-card.rental-completed   { border-left-color:#94a3b8; }
+    .request-card.rejected  { border-left-color:#ef4444; }
+    .request-card.cancelled { border-left-color:#9ca3af; }
+    .req-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+    .req-device { font-size:15px; font-weight:700; color:#1e2d4a; }
+    .req-status {
+      font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; white-space:nowrap;
+    }
+    .req-status.request-pending   { background:#fef3c7; color:#92400e; }
+    .req-status.booking-confirmed  { background:#dcfce7; color:#166534; }
+    .req-status.rental-active      { background:#dbeafe; color:#1e40af; }
+    .req-status.rental-completed   { background:#f1f5f9; color:#475569; }
+    .req-status.rejected  { background:#fee2e2; color:#991b1b; }
+    .req-status.cancelled { background:#f3f4f6; color:#6b7280; }
+    .req-renter { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+    .req-avatar { width:36px; height:36px; border-radius:50%; background:#4a90e2; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; flex-shrink:0; }
+    .req-renter-name { font-size:13px; font-weight:600; color:#333; }
+    .req-renter-email { font-size:11px; color:#888; }
+    .req-dates { display:flex; gap:16px; margin-bottom:10px; }
+    .req-date-block { flex:1; }
+    .req-date-label { font-size:10px; font-weight:700; color:#7b8ab8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:2px; }
+    .req-date-value { font-size:13px; font-weight:600; color:#1e2d4a; }
+    .req-total { font-size:18px; font-weight:700; color:#043873; margin-bottom:14px; }
+    .req-note { font-size:12px; color:#888; margin-bottom:12px; font-style:italic; }
+    .req-actions { display:flex; gap:8px; }
+    .btn-confirm {
+      flex:1; padding:9px 12px; background:#22c55e; color:#fff; border:none;
+      border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s;
+    }
+    .btn-confirm:hover { background:#16a34a; }
+    .btn-reject {
+      flex:1; padding:9px 12px; background:#fff; color:#ef4444; border:1.5px solid #ef4444;
+      border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s;
+    }
+    .btn-reject:hover { background:#fee2e2; }
+    .btn-returned {
+      flex:1; padding:9px 12px; background:#3b82f6; color:#fff; border:none;
+      border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s;
+    }
+    .btn-returned:hover { background:#2563eb; }
+    .btn-confirm-req { flex:1; padding:9px 12px; background:#22c55e; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s; }
+    .btn-confirm-req:hover { background:#16a34a; }
+    .btn-reject-req { flex:1; padding:9px 12px; background:#fff; color:#ef4444; border:1.5px solid #ef4444; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .btn-reject-req:hover { background:#fee2e2; }
+    .btn-returned-req { flex:1; padding:9px 12px; background:#3b82f6; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:background .2s; }
+    .btn-returned-req:hover { background:#2563eb; }
+    .btn-cancel-req { flex:1; padding:9px 12px; background:#fff; color:#6b7280; border:1.5px solid #9ca3af; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .btn-cancel-req:hover { background:#f3f4f6; }
+    .btn-user-review-req {
+      flex:1; padding:9px 12px; background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none;
+      border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity .2s;
+    }
+    .btn-user-review-req:hover { opacity:.88; }
+    .req-empty { text-align:center; padding:60px 20px; color:#aaa; }
+    .req-empty .icon { font-size:48px; margin-bottom:12px; }
+
+    /* ── Chat Inbox ──────────────────────────────────────────────── */
+    .chat-inbox {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+      gap:16px; margin-top:4px;
+    }
+    .chat-room-item {
+      display:flex; flex-direction:column;
+      background:#fff; border-radius:16px;
+      box-shadow:0 2px 12px rgba(4,56,115,.08);
+      border:1.5px solid #e8ecf4;
+      overflow:hidden; cursor:pointer;
+      text-decoration:none; color:inherit;
+      transition:transform .18s, box-shadow .18s, border-color .18s;
+    }
+    .chat-room-item:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(4,56,115,.13); border-color:#b8c8f0; }
+    .chat-room-item.unread { border-color:#4F9CF9; box-shadow:0 2px 14px rgba(79,156,249,.18); }
+    .chat-room-item.unread:hover { box-shadow:0 8px 28px rgba(79,156,249,.28); }
+    /* Device image banner */
+    .cr-img-wrap {
+      width:100%; height:160px; overflow:hidden; position:relative; background:linear-gradient(135deg,#e8eef8,#ccdaf0); flex-shrink:0;
+    }
+    .cr-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
+    .cr-img-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:52px; }
+    .cr-unread-pill {
+      position:absolute; top:10px; right:10px;
+      background:#ef4444; color:#fff; font-size:11px; font-weight:700;
+      padding:3px 10px; border-radius:20px;
+      box-shadow:0 2px 8px rgba(239,68,68,.4);
+    }
+    /* Card body */
+    .cr-body { padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+    .cr-top { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+    .cr-device-name { font-size:15px; font-weight:700; color:#1e2d4a; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cr-time { font-size:11px; color:#9ca3af; white-space:nowrap; flex-shrink:0; margin-top:2px; }
+    .cr-price { font-size:12px; font-weight:600; color:#043873; }
+    .cr-divider { height:1px; background:#f0f4ff; }
+    .cr-preview { display:flex; align-items:center; gap:8px; }
+    .cr-av {
+      width:28px; height:28px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(135deg,#043873,#0a5ba8);
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px; font-weight:700; color:#fff;
+    }
+    .cr-msg { flex:1; font-size:12px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .cr-msg strong { color:#374151; font-weight:600; }
+    .cr-open-btn {
+      display:block; width:calc(100% - 32px); margin:0 16px 14px;
+      padding:9px; border-radius:10px; border:none;
+      background:linear-gradient(135deg,#043873,#0a5ba8); color:#fff;
+      font-size:13px; font-weight:600; cursor:pointer;
+      transition:opacity .18s;
+    }
+    .cr-open-btn:hover { opacity:.88; }
+    .chat-room-item.unread .cr-open-btn { background:linear-gradient(135deg,#1d4ed8,#2563eb); }
+
+    /* ── Chat Notification Bell ──────────────────────────────────── */
+    .notif-bell-wrap { position:relative; }
+    .notif-bell-btn {
+      background:none; border:none; cursor:pointer;
+      font-size:22px; padding:4px 8px; border-radius:8px;
+      position:relative; color:#555;
+      transition:background .15s;
+    }
+    .notif-bell-btn:hover { background:#f0f0f8; }
+    .notif-count {
+      position:absolute; top:-2px; right:-2px;
+      background:#ef4444; color:#fff; font-size:10px; font-weight:700;
+      min-width:18px; height:18px; border-radius:9px; padding:0 4px;
+      display:none; align-items:center; justify-content:center; line-height:1;
+    }
+    .notif-count.has-new { display:flex; }
+    .notif-dropdown {
+      display:none; position:absolute; top:calc(100% + 8px); right:0;
+      width:320px; background:#fff; border-radius:14px;
+      box-shadow:0 8px 32px rgba(0,0,0,.14);
+      border:1px solid #e8ecf4; z-index:1200;
+    }
+    .notif-dropdown.open { display:block; }
+    .notif-dd-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 16px; border-bottom:1px solid #f0f0f8;
+    }
+    .notif-dd-title { font-size:14px; font-weight:700; color:#1a1a2e; }
+    .notif-mark-all {
+      font-size:12px; color:#667eea; background:none; border:none; cursor:pointer; font-weight:600;
+    }
+    .notif-list { max-height:320px; overflow-y:auto; }
+    .notif-item {
+      display:flex; gap:10px; padding:12px 16px;
+      border-bottom:1px solid #f8f8fc; cursor:pointer;
+      transition:background .15s; align-items:flex-start;
+      text-decoration:none; color:inherit;
+    }
+    .notif-item:hover { background:#f5f7ff; }
+    .notif-item.unread { background:#f0f4ff; }
+    .notif-item.unread:hover { background:#e8eeff; }
+    .notif-dot { width:8px; height:8px; border-radius:50%; background:#667eea; flex-shrink:0; margin-top:5px; }
+    .notif-item:not(.unread) .notif-dot { background:transparent; }
+    .notif-body { flex:1; min-width:0; }
+    .notif-device { font-size:13px; font-weight:700; color:#1a1a2e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .notif-sender { font-size:12px; color:#667eea; margin-top:1px; }
+    .notif-preview { font-size:12px; color:#6b7280; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .notif-time { font-size:11px; color:#bbb; white-space:nowrap; margin-top:2px; }
+    .notif-empty { text-align:center; padding:32px 16px; color:#bbb; font-size:13px; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/features/auth/devices-auth.html">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html" class="active">จัดการอุปกรณ์</a>
+        <a href="/features/devices/devicehistory.html">ประวัติการยืม</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <!-- Chat notification bell -->
+        <div class="notif-bell-wrap" id="notifBellWrap">
+          <button class="notif-bell-btn" id="notifBellBtn" aria-label="แจ้งเตือนข้อความแชท" title="การแจ้งเตือนแชท">
+            &#x1F514;
+            <span class="notif-count" id="notifCount"></span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown" aria-hidden="true">
+            <div class="notif-dd-header">
+              <span class="notif-dd-title">&#x1F4AC; ข้อความแชทจากผู้เช่า</span>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="notif-empty">ไม่มีการแจ้งเตือน</div>
+            </div>
+          </div>
+        </div>
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="rentout-page">
+    <div class="container">
+      <section class="rentout-head centered" style="margin-bottom:0;">
+        <h1>จัดการอุปกรณ์</h1>
+        <div class="add-device-wrap">
+          <button id="openAddRent" class="btn btn-cta" type="button">⭐ เพิ่มอุปกรณ์</button>
+        </div>
+      </section>
+
+      <!-- Tabs -->
+      <div class="page-tabs">
+        <button class="page-tab active" data-tab="mydevices"> อุปกรณ์ของฉัน</button>
+        <button class="page-tab" data-tab="incoming"> แชทที่เข้ามา <span class="badge" id="incomingBadge" style="display:none">0</span></button>
+        <button class="page-tab" data-tab="outgoing"> คำขอที่ส่งไป</button>
+      </div>
+
+      <!-- Tab: My Devices -->
+      <div class="tab-pane active" id="tab-mydevices">
+        <section class="rentout-list">
+          <div class="rentout-cards three-up">
+          <div class="req-empty">
+            <div class="icon">📦</div>
+            <p>ไม่มีอุปกรณ์</p>
+          </div>
+        </div>
+      </section>
+      </div><!-- /tab-pane#mydevices -->
+
+      <!-- Tab: Incoming (Requests + Chats) -->
+      <div class="tab-pane" id="tab-incoming">
+        <!-- Incoming Rental Requests -->
+        <h3 style="font-size:15px;font-weight:700;color:#043873;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8ecf4;">📋 คำขอเช่าที่เข้ามา</h3>
+        <div class="request-grid" id="incomingRequestsGrid">
+          <div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>
+        </div>
+        <!-- Incoming Chats -->
+        <h3 style="font-size:15px;font-weight:700;color:#043873;margin:28px 0 14px;padding-bottom:8px;border-bottom:2px solid #e8ecf4;">💬 แชทที่เข้ามา</h3>
+        <div id="chatInboxContainer">
+          <div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>
+        </div>
+      </div>
+
+      <!-- Tab: Outgoing Requests -->
+      <div class="tab-pane" id="tab-outgoing">
+        <div class="request-grid" id="outgoingGrid">
+          <div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>
+        </div>
+      </div>
+
+      <!-- Review Modal (history + write views) -->
+      <div id="reviewOverlay" class="review-overlay" aria-hidden="true">
+        <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+          <button class="modal-close" id="closeReview" aria-label="Close">&times;</button>
+          <h3 id="reviewTitle">Review History</h3>
+
+          <!-- HISTORY VIEW -->
+          <div class="review-body review-history" id="reviewHistoryView">
+            <div class="review-lessee header">
+              <div class="review-avatar"></div>
+              <div>
+                <div class="review-lessee-name" id="reviewLesseeName">Lessee Name</div>
+                <div class="review-stars small" aria-hidden>
+                  <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="review-list" id="reviewList">
+              <!-- reviews loaded from database -->
+            </div>
+
+            <div class="modal-actions history-actions">
+              <button id="writeReviewBtn" class="btn btn-cta">Write your review</button>
+            </div>
+          </div>
+
+          <!-- WRITE VIEW (hidden by default) -->
+          <div class="review-body review-write hidden" id="reviewWriteView">
+            <div class="review-lessee header">
+              <div class="review-avatar"></div>
+              <div>
+                <div class="review-lessee-name" id="writeLesseeName">Lessee Name</div>
+              </div>
+            </div>
+
+            <div class="review-stars" id="reviewStars" aria-hidden>
+              <button class="star" data-value="1">★</button>
+              <button class="star" data-value="2">★</button>
+              <button class="star" data-value="3">★</button>
+              <button class="star" data-value="4">★</button>
+              <button class="star" data-value="5">★</button>
+            </div>
+
+            <label for="reviewText" class="review-label">Write your review</label>
+            <textarea id="reviewText" rows="6" placeholder="Write your review"></textarea>
+
+            <div class="modal-actions">
+              <button id="submitReview" class="btn btn-cta">Confirm</button>
+              <button id="backToHistory" class="btn btn-outline">Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+
+    // Check for success message
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('added') === 'success') {
+      const deviceNo = urlParams.get('deviceNo');
+      setTimeout(() => {
+        alert('✅ เพิ่มอุปกรณ์สำเร็จ! (Device #' + deviceNo + ')\nสถานะ: Request Pending (พร้อมรับคำขอเช่า)');
+        // Clean URL
+        window.history.replaceState({}, document.title, '/rentout.html');
+      }, 300);
+    }
+
+    // ── Detect admin and show/hide price fields ────────────────────────
+    // Price fields start hidden (display:none in HTML);
+    // reveal them only for non-admin users.
+    var _isAdmin = false;
+    (function () {
+      try {
+        const tok = localStorage.getItem('access_token');
+        if (tok) {
+          const payload = JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+          _isAdmin = !!payload.is_admin;
+        }
+      } catch (_) {}
+      // NOTE: DOM manipulation moved to post-modal script block below
+    })();
+
+    // Load user's devices from API
+    async function loadMyDevices() {
+      let token = localStorage.getItem('access_token');
+      // Fallback to getAuthToken from auth.js if available
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/devices/my', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success && result.data && result.data.data) {
+          displayDevices(result.data.data);
+        }
+      } catch (error) {
+        console.error('Error loading devices:', error);
+      }
+    }
+
+    // Display devices in the UI
+    function displayDevices(devices) {
+      const container = document.querySelector('.rentout-cards');
+      if (!container || !devices || devices.length === 0) return;
+
+      // Clear existing static cards
+      container.innerHTML = '';
+
+      devices.forEach(device => {
+        container.appendChild(createDeviceCard(device));
+      });
+    }
+
+    // Create device card HTML
+    function createDeviceCard(device) {
+      const article = document.createElement('article');
+      article.className = 'rentout-card';
+      article.dataset.id = device.deviceNo;
+      article.dataset.status = device.status || '1';
+      article.dataset.name = device.name;
+      article.dataset.type = device.type;
+      article.dataset.price = device.price;
+      article.dataset.description = device.description || '';
+      article.dataset.imageUrl = device.imageUrl || '';
+
+      // Map status to badge (new rental lifecycle statuses)
+      const statusMap = {
+        1: { text: 'รอการยืนยัน',        class: 'badge-pending' },
+        '1': { text: 'รอการยืนยัน',       class: 'badge-pending' },
+        'Request Pending':   { text: 'รอการยืนยัน',        class: 'badge-pending' },
+        2: { text: 'ยืนยันการเช่าแล้ว',   class: 'badge-confirmed' },
+        '2': { text: 'ยืนยันการเช่าแล้ว', class: 'badge-confirmed' },
+        'Booking Confirmed': { text: 'ยืนยันการเช่าแล้ว',  class: 'badge-confirmed' },
+        3: { text: 'กำลังเช่า',           class: 'badge-rental-active' },
+        '3': { text: 'กำลังเช่า',          class: 'badge-rental-active' },
+        'Rental Active':     { text: 'กำลังเช่า',           class: 'badge-rental-active' },
+        4: { text: 'การเช่าเสร็จสิ้น',    class: 'badge-completed' },
+        '4': { text: 'การเช่าเสร็จสิ้น',  class: 'badge-completed' },
+        'Rental Completed':  { text: 'การเช่าเสร็จสิ้น',   class: 'badge-completed' },
+        'rejected':          { text: 'ปฏิเสธแล้ว',           class: 'badge-rejected' },
+        'cancelled':         { text: 'ยกเลิกแล้ว',           class: 'badge-cancelled' },
+        'ปฏิเสธแล้ว':        { text: 'ปฏิเสธแล้ว',           class: 'badge-rejected' },
+        'ยกเลิกแล้ว':        { text: 'ยกเลิกแล้ว',           class: 'badge-cancelled' }
+      };
+      const currentStatus = statusMap[device.status] || { text: device.status || 'ไม่ทราบสถานะ', class: 'badge-pending' };
+
+      const statusBadge = `<span class="badge ${currentStatus.class}">${currentStatus.text}</span>`;
+
+      // Cannot edit or delete if rental is in progress (Booking Confirmed=2 or Rental Active=3)
+      const canModify = device.status != 2 && device.status != 3;
+      const canDelete = device.status != 2 && device.status != 3;
+
+      const statusButtons = `
+        <div class="card-divider"></div>
+        <div class="card-footer">
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button class="btn btn-outline btn-edit" data-device-id="${device.deviceNo}" ${!canModify ? 'disabled title="Cannot edit device while rental is in progress"' : ''}>Edit</button>
+            <button class="btn btn-outline btn-delete" data-device-id="${device.deviceNo}" ${!canDelete ? 'disabled title="Cannot delete device while rental is in progress"' : ''} style="color: #d32f2f; border-color: #d32f2f;">Delete</button>
+            <button class="btn btn-outline btn-view-history" data-device-id="${device.deviceNo}">History</button>
+          </div>
+        </div>
+      `;
+
+      // Get first image URL (handle JSON array or single URL)
+      let firstImageUrl = '';
+      if (device.imageUrl) {
+        try {
+          const imageUrls = JSON.parse(device.imageUrl);
+          if (Array.isArray(imageUrls) && imageUrls.length > 0) {
+            firstImageUrl = imageUrls[0];
+          }
+        } catch {
+          // Not JSON, use as is
+          firstImageUrl = device.imageUrl;
+        }
+      }
+
+      article.innerHTML = `
+        <div class="card-media-large" aria-hidden ${firstImageUrl ? `style="background-image:url('${firstImageUrl}'); background-size:cover;"` : ''}></div>
+        <div class="card-content">
+          <h3 class="device-name">${escapeHtml(device.name)}</h3>
+          <div class="meta small">ประเภท · ${escapeHtml(device.type || 'อุปกรณ์')}</div>
+          <div class="meta small">ราคา · $${device.price}/วัน</div>
+          <div class="meta small">คะแนน · ${device.rating || 0} ⭐</div>
+          <div class="meta small status-row">สถานะ · ${statusBadge}</div>
+          <div class="meta small">เพิ่มเมื่อ · ${device.createdAt ? new Date(device.createdAt).toLocaleDateString() : 'เมื่อเร็วๆ นี้'}</div>
+          ${statusButtons}
+        </div>
+      `;
+
+      return article;
+    }
+
+    // Simple HTML escaper
+    function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // Realtime status polling (every 10 seconds)
+    setInterval(loadMyDevices, 10000);
+
+    // Status History Modal Functions (look up elements dynamically to avoid null errors)
+
+    async function loadDeviceHistory(deviceId) {
+      const statusHistoryContent = document.getElementById('statusHistoryContent');
+      if (!statusHistoryContent) return;
+
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) {
+        alert('กรุณาเข้าสู่ระบบก่อน');
+        return;
+      }
+
+      statusHistoryContent.innerHTML = '<p style="text-align: center; color: #666;">กำลังโหลด...</p>';
+
+      try {
+        const response = await fetch(`http://localhost:3001/api/devices/${deviceId}/history`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        const result = await response.json();
+        
+        if (response.ok && result.success && result.data) {
+          displayHistory(result.data);
+        } else {
+          throw new Error(result.message || 'ไม่สามารถโหลดประวัติได้');
+        }
+      } catch (error) {
+        console.error('Error loading history:', error);
+        statusHistoryContent.innerHTML = `<p style="text-align: center; color: #d32f2f;">เกิดข้อผิดพลาด: ${escapeHtml(error.message)}</p>`;
+      }
+    }
+
+    const statusThaiMap = {
+      'Request Pending':   'รอการยืนยัน',
+      'Booking Confirmed': 'ยืนยันการเช่าแล้ว',
+      'Rental Active':     'กำลังเช่า',
+      'Rental Completed':  'การเช่าเสร็จสิ้น',
+      'rejected':          'ปฏิเสธแล้ว',
+      'cancelled':         'ยกเลิกแล้ว'
+    };
+    const statusColorMap = {
+      'Request Pending':   '#f59e0b',
+      'Booking Confirmed': '#22c55e',
+      'Rental Active':     '#3b82f6',
+      'Rental Completed':  '#6366f1',
+      'rejected':          '#d32f2f',
+      'cancelled':         '#9e9e9e'
+    };
+
+    function displayHistory(history) {
+      const statusHistoryContent = document.getElementById('statusHistoryContent');
+      if (!statusHistoryContent) return;
+      if (!history || history.length === 0) {
+        statusHistoryContent.innerHTML = '<p style="text-align: center; color: #666;">ยังไม่มีประวัติการเปลี่ยนสถานะ</p>';
+        return;
+      }
+
+      const historyHTML = history.map(entry => {
+        const date = new Date(entry.changedAt);
+        const formattedDate = date.toLocaleString('th-TH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        const thaiName = statusThaiMap[entry.statusName] || entry.statusName;
+        const color = statusColorMap[entry.statusName] || '#666';
+
+        return `
+          <div style="border-left: 3px solid ${color}; padding: 12px 16px; margin-bottom: 12px; background: #f9f9f9; border-radius: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+              <strong style="color: ${color}; font-size: 16px;">${escapeHtml(thaiName)}</strong>
+              <span style="color: #666; font-size: 13px;">${formattedDate}</span>
+            </div>
+            <div style="color: #666; font-size: 14px;">
+              เปลี่ยนโดย: <strong>${escapeHtml(entry.changedByEmail)}</strong>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      statusHistoryContent.innerHTML = historyHTML;
+    }
+
+    function openHistoryModal(deviceId) {
+      const overlay = document.getElementById('statusHistoryOverlay');
+      if (!overlay) return;
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      loadDeviceHistory(deviceId);
+    }
+
+    function closeHistoryModalFunc() {
+      const overlay = document.getElementById('statusHistoryOverlay');
+      if (!overlay) return;
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // Handle view history button clicks
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-view-history');
+      if (!btn) return;
+      const deviceId = btn.dataset.deviceId;
+      if (deviceId) openHistoryModal(deviceId);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const overlay = document.getElementById('statusHistoryOverlay');
+      const closeBtn = document.getElementById('closeHistoryModal');
+      closeBtn && closeBtn.addEventListener('click', closeHistoryModalFunc);
+      overlay && overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeHistoryModalFunc();
+      });
+    });
+
+    // Load devices when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMyDevices();
+      // Pre-load badge count for unread chat notifications
+      loadIncomingBadge();
+      // Auto-open chats tab if URL param says so
+      const _tabParam = new URLSearchParams(window.location.search).get('tab');
+      if (_tabParam === 'chats' || _tabParam === 'incoming') {
+        document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        const incomingTab = document.querySelector('.page-tab[data-tab="incoming"]');
+        const incomingPane = document.getElementById('tab-incoming');
+        if (incomingTab) incomingTab.classList.add('active');
+        if (incomingPane) incomingPane.classList.add('active');
+        loadIncomingRequests();
+        loadChatRooms();
+      }
+    });
+
+    // ── Tab Switching ─────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.page-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+          if (tab.dataset.tab === 'incoming') { loadIncomingRequests(); loadChatRooms(); }
+          if (tab.dataset.tab === 'outgoing') loadOutgoingRequests();
+        });
+      });
+    });
+
+    // Pre-load badge: show unread chat notification count
+    async function loadIncomingBadge() {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      try {
+        const res = await fetch('/api/chat/notifications/unread', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await res.json();
+        const unread = result.unread || 0;
+        const badge = document.getElementById('incomingBadge');
+        if (!badge) return;
+        if (unread > 0) { badge.textContent = unread; badge.style.display = 'inline-block'; }
+        else { badge.style.display = 'none'; }
+      } catch(e) { /* silent */ }
+    }
+
+    // ── Chat Inbox ─────────────────────────────────────────────────
+    async function loadChatRooms() {
+      const token = localStorage.getItem('access_token');
+      const container = document.getElementById('chatInboxContainer');
+      if (!container) return;
+      container.innerHTML = '<div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>';
+      try {
+        const res = await fetch('/api/chat/owner-rooms', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await res.json();
+        const rooms = Array.isArray(result.data) ? result.data : [];
+        if (rooms.length === 0) {
+          container.innerHTML = '<div class="req-empty"><div class="icon">💬</div><p>ยังไม่มีแชทเข้ามา</p></div>';
+          return;
+        }
+        container.innerHTML = '<div class="chat-inbox">' + rooms.map(renderChatRoomItem).join('') + '</div>';
+        // Update badge
+        const totalUnread = rooms.reduce((s, r) => s + (r.unreadCount || 0), 0);
+        const badge = document.getElementById('incomingBadge');
+        if (badge) {
+          if (totalUnread > 0) { badge.textContent = totalUnread; badge.style.display = 'inline-block'; }
+          else { badge.style.display = 'none'; }
+        }
+      } catch(e) {
+        container.innerHTML = '<div class="req-empty"><div class="icon">⚠️</div><p>โหลดข้อมูลไม่ได้</p></div>';
+      }
+    }
+
+    function renderChatRoomItem(room) {
+      // Extract renterId from room name pattern: dev-{deviceId}-u-{renterId}
+      const m = String(room.roomName).match(/dev-\d+-u-(\d+)/);
+      const renterId = m ? m[1] : '';
+      const initial = room.lastSenderName ? room.lastSenderName.charAt(0).toUpperCase() : '?';
+      const time = room.lastMessageAt ? formatChatTime(new Date(room.lastMessageAt)) : '';
+      const isUnread = (room.unreadCount || 0) > 0;
+      const unreadCount = room.unreadCount || 0;
+
+      // Build device image HTML
+      let imgHtml = '';
+      if (room.imageUrl) {
+        // Parse JSON array or single URL
+        let imgSrc = room.imageUrl;
+        try {
+          const arr = JSON.parse(room.imageUrl);
+          if (Array.isArray(arr) && arr.length > 0) imgSrc = arr[0];
+        } catch(e) {}
+        imgHtml = '<img src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(room.deviceName || '') + '" loading="lazy" />';
+      } else {
+        imgHtml = '<div class="cr-img-placeholder">📱</div>';
+      }
+
+      const previewText = room.lastMessage
+        ? (room.lastSenderName ? '<strong>' + escapeHtml(room.lastSenderName) + ':</strong> ' : '') + escapeHtml(room.lastMessage)
+        : '<i>ยังไม่มีข้อความ</i>';
+
+      const priceText = room.rentPrice ? '฿' + Number(room.rentPrice).toFixed(0) + '/วัน' : '';
+
+      const chatUrl = '/features/chat/rental-chat.html?room=' + encodeURIComponent(room.roomName)
+        + '&deviceId=' + encodeURIComponent(room.deviceId)
+        + (renterId ? '&renterId=' + encodeURIComponent(renterId) : '');
+
+      return '<a class="chat-room-item' + (isUnread ? ' unread' : '') + '" href="' + chatUrl + '">'
+        + '<div class="cr-img-wrap">'
+        + imgHtml
+        + (isUnread ? '<div class="cr-unread-pill">' + (unreadCount > 99 ? '99+' : unreadCount) + ' ใหม่</div>' : '')
+        + '</div>'
+        + '<div class="cr-body">'
+        + '<div class="cr-top">'
+        + '<div class="cr-device-name">' + escapeHtml(room.deviceName || 'อุปกรณ์') + '</div>'
+        + '<div class="cr-time">' + escapeHtml(time) + '</div>'
+        + '</div>'
+        + (priceText ? '<div class="cr-price">💰 ' + escapeHtml(priceText) + '</div>' : '')
+        + '<div class="cr-divider"></div>'
+        + '<div class="cr-preview">'
+        + '<div class="cr-av">' + escapeHtml(String(initial)) + '</div>'
+        + '<div class="cr-msg">' + previewText + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<button class="cr-open-btn">💬 เปิดแชท</button>'
+        + '</a>';
+    }
+
+    function formatChatTime(date) {
+      const now = new Date();
+      const diff = now - date;
+      if (diff < 60000) return 'เมื่อกี้';
+      if (diff < 3600000) return Math.floor(diff / 60000) + ' นาทีที่แล้ว';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + ' ชม.ที่แล้ว';
+      if (diff < 604800000) return Math.floor(diff / 86400000) + ' วันที่แล้ว';
+      return date.toLocaleDateString('th-TH');
+    }
+
+    // ── Incoming Requests (Owner side) ───────────────────────────
+    async function loadIncomingRequests() {
+      const token = localStorage.getItem('access_token');
+      const grid = document.getElementById('incomingRequestsGrid');
+      if (!grid) return;
+      grid.innerHTML = '<div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>';
+      try {
+        const res = await fetch('/api/rental-requests/incoming', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await res.json();
+        const requests = Array.isArray(result.data) ? result.data : [];
+        grid.innerHTML = requests.length === 0
+          ? '<div class="req-empty"><div class="icon">📋</div><p>ยังไม่มีคำขอเช่าที่เข้ามา</p></div>'
+          : requests.map(r => renderRequestCard(r, 'incoming')).join('');
+      } catch(e) {
+        grid.innerHTML = '<div class="req-empty"><div class="icon">⚠️</div><p>โหลดข้อมูลไม่ได้</p></div>';
+      }
+    }
+
+    // ── Outgoing Requests ─────────────────────────────────────────
+    async function loadOutgoingRequests() {
+      const token = localStorage.getItem('access_token');
+      const grid = document.getElementById('outgoingGrid');
+      if (!grid) return;
+      grid.innerHTML = '<div class="req-empty"><div class="icon">⏳</div><p>กำลังโหลด...</p></div>';
+      try {
+        const res = await fetch('/api/rental-requests/outgoing', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await res.json();
+        const requests = Array.isArray(result.data) ? result.data : [];
+        grid.innerHTML = requests.length === 0
+          ? '<div class="req-empty"><div class="icon">📬</div><p>ยังไม่มีคำขอที่ส่งออกไป</p></div>'
+          : requests.map(r => renderRequestCard(r, 'outgoing')).join('');
+      } catch(e) {
+        grid.innerHTML = '<div class="req-empty"><div class="icon">⚠️</div><p>โหลดข้อมูลไม่ได้</p></div>';
+      }
+    }
+
+    function renderRequestCard(r, mode) {
+      const name = mode === 'incoming'
+        ? (r.renterName || r.renterEmail || 'ผู้เช่า')
+        : (r.ownerName || r.ownerEmail || 'เจ้าของ');
+      const initial = name.charAt(0).toUpperCase();
+      const days = Math.ceil((new Date(r.endDate) - new Date(r.startDate)) / 86400000) + 1;
+      const status = r.status || 'Request Pending';
+      const statusCls = { 'Request Pending':'request-pending', 'Booking Confirmed':'booking-confirmed', 'Rental Active':'rental-active', 'Rental Completed':'rental-completed', rejected:'rejected', cancelled:'cancelled' };
+      const statusLabel = { 'Request Pending':'รอการยืนยัน', 'Booking Confirmed':'ยืนยันแล้ว', 'Rental Active':'กำลังเช่า', 'Rental Completed':'เสร็จสิ้น', rejected:'ปฏิเสธแล้ว', cancelled:'ยกเลิกแล้ว' };
+      const cls = statusCls[status] || 'request-pending';
+      let actions = '';
+      if (mode === 'incoming') {
+        if (status === 'Request Pending') {
+          actions = `<button class="btn-confirm-req" onclick="handleRequest(${r.requestNo},'confirm')">✅ ยืนยัน</button>
+                     <button class="btn-reject-req"  onclick="handleRequest(${r.requestNo},'reject')">❌ ปฏิเสธ</button>`;
+        } else if (status === 'Booking Confirmed') {
+          actions = `<button class="btn-returned-req" onclick="handleRequest(${r.requestNo},'active')" style="background:#f59e0b">🚀 เริ่มการเช่า (Rental Active)</button>
+                     <button class="btn-returned-req" onclick="handleRequest(${r.requestNo},'returned')">📦 รับคืนแล้ว</button>`;
+        } else if (status === 'Rental Active') {
+          actions = `<button class="btn-returned-req" onclick="handleRequest(${r.requestNo},'returned')">📦 รับคืน (Rental Completed)</button>`;
+        } else if (status === 'Rental Completed') {
+          const _renterNm = escapeHtml(r.renterName || r.renterEmail || 'ผู้เช่า');
+          actions = `<button class="btn-user-review-req" data-request-no="${r.requestNo}" data-device-no="${r.deviceNo || 0}" data-other-name="${_renterNm}" data-role="owner">⭐ รีวิวผู้เช่า</button>`;
+        }
+      } else if (mode === 'outgoing') {
+        if (status === 'Request Pending') {
+          actions = `<button class="btn-cancel-req" onclick="handleRequest(${r.requestNo},'cancel')">🚫 ยกเลิกคำขอ</button>`;
+        }
+        if (status === 'Rental Active' || status === 'Rental Completed') {
+          const _ownerNm = escapeHtml(r.ownerName || r.ownerEmail || 'เจ้าของ');
+          actions += `<button class="btn-user-review-req" data-request-no="${r.requestNo}" data-device-no="${r.deviceNo || 0}" data-other-name="${_ownerNm}" data-role="renter">⭐ รีวิวเจ้าของ</button>`;
+        }
+      }
+      return `<div class="request-card ${cls}">
+        <div class="req-header">
+          <div class="req-device">📱 ${escapeHtml(r.deviceName || 'อุปกรณ์')}</div>
+          <span class="req-status ${cls}">${statusLabel[status] || escapeHtml(status)}</span>
+        </div>
+        <div class="req-renter">
+          <div class="req-avatar">${escapeHtml(initial)}</div>
+          <div><div class="req-renter-name">${escapeHtml(name)}</div></div>
+        </div>
+        <div class="req-dates">
+          <div class="req-date-block"><div class="req-date-label">เริ่ม</div><div class="req-date-value">${escapeHtml(String(r.startDate || ''))}</div></div>
+          <div class="req-date-block"><div class="req-date-label">สิ้นสุด</div><div class="req-date-value">${escapeHtml(String(r.endDate || ''))}</div></div>
+          <div class="req-date-block"><div class="req-date-label">จำนวนวัน</div><div class="req-date-value">${days} วัน</div></div>
+        </div>
+        <div class="req-total">฿${Number(r.totalPrice || 0).toFixed(2)}</div>
+        ${r.note ? `<div class="req-note">📝 ${escapeHtml(r.note)}</div>` : ''}
+        ${actions ? `<div class="req-actions">${actions}</div>` : ''}
+      </div>`;
+    }
+
+    async function handleRequest(requestNo, action) {
+      const token = localStorage.getItem('access_token');
+      const labels = {
+        confirm: 'ยืนยันคำขอ (Request Pending → Booking Confirmed)',
+        reject:  'ปฏิเสธคำขอ',
+        active:  'เริ่มการเช่า (Booking Confirmed → Rental Active)',
+        returned:'รับคืนอุปกรณ์ (→ Rental Completed)',
+        cancel:  'ยกเลิกคำขอ'
+      };
+      if (!confirm(`ต้องการ${labels[action] || action}ใช่หรือไม่?`)) return;
+      try {
+        const res = await fetch(`/api/rental-requests/${requestNo}/${action}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          const successMsg = {
+            confirm:  'ยืนยันสำเร็จ — สถานะ: Booking Confirmed',
+            active:   'เริ่มการเช่าสำเร็จ — สถานะ: Rental Active',
+            returned: 'รับคืนสำเร็จ — สถานะ: Rental Completed',
+            reject:   '❌ ปฏิเสธสำเร็จ',
+            cancel:   '🚫 ยกเลิกสำเร็จ'
+          };
+          alert(successMsg[action] || '✅ สำเร็จ');
+          if (action === 'cancel') {
+            loadOutgoingRequests();
+          } else if (action === 'confirm' || action === 'active') {
+            /* After confirming/activating, reload incoming requests to show updated status */
+            loadIncomingRequests();
+          } else if (action === 'returned') {
+            /* After marking returned (Rental Completed), reload incoming requests — review button will appear */
+            loadIncomingRequests();
+          } else if (action === 'reject') {
+            loadIncomingRequests();
+          } else {
+            loadMyDevices();
+          }
+        } else {
+          alert('ไม่สำเร็จ: ' + (result.message || 'เกิดข้อผิดพลาด'));
+        }
+      } catch(e) {
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      }
+    }
+  </script>
+  <script src="/js/navpopups.js"></script>
+  <script src="/features/management/device-edit-delete.js"></script>
+  <script src="/js/image-upload.js"></script>
+  <script>
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', ()=>{
+        const q = headerSearchInput.value.trim(); if(!q) return; window.location.href = '/renttypedevice?type=search&q='+encodeURIComponent(q);
+      });
+      headerSearchInput && headerSearchInput.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ e.preventDefault(); headerSearchSubmit.click(); } else if(e.key==='Escape'){ hideSearch(); } });
+      document.addEventListener('click',(e)=>{ if(!headerSearch.contains(e.target) && e.target !== navSearchBtn) hideSearch(); });
+    })();
+  </script>
+
+  <!-- Confirm Modal for requested  items -->
+  <div id="confirmOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <button class="modal-close" id="closeConfirm" aria-label="Close">&times;</button>
+      <h3 id="confirmTitle">Confirm Request</h3>
+      <p id="confirmMessage">Confirm request for <strong id="confirmDevice"></strong> to <strong id="confirmLessee"></strong>?</p>
+      <div class="modal-actions">
+        <button id="confirmAccept" class="btn btn-cta">Confirm</button>
+        <button id="confirmCancel" class="btn btn-outline">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Rent Modal -->
+  <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" id="closeModal" aria-label="Close">&times;</button>
+      <h2 id="modalTitle" class="modal-title">Add Rent</h2>
+      <form id="addRentForm" class="modal-form" autocomplete="off">
+        <div class="form-row">
+          <label for="deviceName">Device Name</label>
+          <input id="deviceName" name="deviceName" type="text" required placeholder="e.g. MacBook Pro 13&quot;">
+        </div>
+
+        <div class="form-row form-row--split">
+          <div>
+            <label for="deviceType">Device Type</label>
+            <select id="deviceType" name="deviceType" required>
+              <option value="">Select type</option>
+              <option value="Notebook">Notebook</option>
+              <option value="MacBook">MacBook</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="priceFieldWrap" style="display:none">
+            <label for="price">Price / Day</label>
+            <input id="price" name="price" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="4" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="imageUpload">Upload Images (Max 5 images)</label>
+          <input id="imageUpload" name="images" type="file" accept="image/*" multiple>
+          <small style="color: #666; margin-top: 4px; display: block;">Hold Ctrl/Cmd to select multiple images. Max 10MB per image.</small>
+        </div>
+
+        <div id="imagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
+          <!-- Image previews will appear here -->
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-cta">Confirm</button>
+          <button type="button" id="cancelModal" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Device Modal -->
+  <div id="editModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+      <button class="modal-close" id="closeEditModal" aria-label="Close">&times;</button>
+      <h2 id="editModalTitle" class="modal-title">Edit Device</h2>
+      <form id="editDeviceForm" class="modal-form" autocomplete="off">
+        <input type="hidden" id="editDeviceId" name="deviceId">
+        <div class="form-row">
+          <label for="editDeviceName">Device Name</label>
+          <input id="editDeviceName" name="deviceName" type="text" required placeholder="e.g. MacBook Pro 13\"">
+        </div>
+
+        <div class="form-row form-row--split">
+          <div>
+            <label for="editDeviceType">Device Type</label>
+            <select id="editDeviceType" name="deviceType" required>
+              <option value="">Select type</option>
+              <option value="Notebook">Notebook</option>
+              <option value="MacBook">MacBook</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div id="editPriceFieldWrap" style="display:none">
+            <label for="editPrice">Price / Day</label>
+            <input id="editPrice" name="price" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label for="editDescription">Description</label>
+          <textarea id="editDescription" name="description" rows="4" placeholder="Optional notes"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label for="editImages">Images (Max 5 images)</label>
+          <input id="editImages" name="images" type="file" accept="image/*" multiple>
+          <small style="color: #666; margin-top: 4px; display: block;">Hold Ctrl/Cmd to select multiple images. Max 10MB per image.</small>
+        </div>
+
+        <div id="editImagePreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px;">
+          <!-- Image previews will appear here -->
+        </div>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-cta">Update</button>
+          <button type="button" id="cancelEditModal" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Status History Modal -->
+  <div id="statusHistoryOverlay" class="modal-overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle" style="max-width: 700px;">
+      <button class="modal-close" id="closeHistoryModal" aria-label="Close">&times;</button>
+      <h2 id="historyModalTitle" class="modal-title">Status Change History</h2>
+      <div id="statusHistoryContent" style="max-height: 400px; overflow-y: auto; margin-top: 20px;">
+        <p style="text-align: center; color: #666;">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── User-to-User Review Modal ──────────────────────────────────── -->
+  <div id="userReviewOverlay" class="review-overlay" aria-hidden="true">
+    <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="urTitle">
+      <button class="modal-close" id="urClose" aria-label="Close">&times;</button>
+      <h3 id="urTitle">⭐ รีวิว</h3>
+
+      <!-- Loading -->
+      <div id="urLoading" class="review-body">
+        <p style="text-align:center;padding:32px 0;color:#999;font-size:15px">กำลังตรวจสอบสิทธิ์...</p>
+      </div>
+
+      <!-- Already reviewed -->
+      <div id="urDone" class="review-body hidden">
+        <div style="text-align:center;padding:24px 0 16px">
+          <div style="font-size:52px;margin-bottom:10px">✅</div>
+          <div style="font-size:16px;font-weight:700;color:#22c55e;margin-bottom:8px">ส่งรีวิวเรียบร้อยแล้ว</div>
+          <div id="urDoneStars" style="font-size:26px;color:#FFC000;margin-bottom:6px"></div>
+          <div id="urDoneDesc" style="font-size:14px;color:#555;font-style:italic;max-width:260px;margin:0 auto;line-height:1.5"></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-outline urCloseBtn">ปิด</button></div>
+      </div>
+
+      <!-- Blocked (condition not met) -->
+      <div id="urBlocked" class="review-body hidden">
+        <div style="text-align:center;padding:24px 0 16px">
+          <div style="font-size:52px;margin-bottom:10px">🔒</div>
+          <div id="urBlockedMsg" style="font-size:14px;color:#555;line-height:1.7;max-width:280px;margin:0 auto"></div>
+          <div id="urBlockedStatus" style="margin-top:10px;font-size:13px;color:#7b8ab8;font-weight:600;padding:6px 14px;background:#f0f4ff;border-radius:20px;display:inline-block"></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-outline urCloseBtn">ปิด</button></div>
+      </div>
+
+      <!-- Write review -->
+      <div id="urWrite" class="review-body hidden">
+        <div class="review-lessee header" style="margin-bottom:16px">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="urWriteName">-</div>
+            <div id="urWriteRole" style="font-size:12px;color:#888;margin-top:2px"></div>
+          </div>
+        </div>
+
+        <!-- ① คะแนนอุปกรณ์ (ดาวอย่างเดียว → บันทึกลง Device.Rating) -->
+        <div id="urDeviceStarsSection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1.5px solid #eef0f5">
+          <div class="review-label" style="margin-bottom:8px">
+            ⭐ คะแนนอุปกรณ์
+            <span style="color:#bbb;font-weight:400;font-size:11px">(บังคับ)</span>
+          </div>
+          <div class="review-stars" id="urDeviceStars" aria-label="คะแนนอุปกรณ์">
+            <button class="star" data-value="1" type="button">★</button>
+            <button class="star" data-value="2" type="button">★</button>
+            <button class="star" data-value="3" type="button">★</button>
+            <button class="star" data-value="4" type="button">★</button>
+            <button class="star" data-value="5" type="button">★</button>
+          </div>
+        </div>
+
+        <!-- ② คะแนนบุคคล (ดาว + ข้อความ → บันทึกลง UserReview) -->
+        <div class="review-label" style="margin-bottom:8px">
+          👤 คะแนน <span id="urPersonLabel">บุคคล</span>
+          <span style="color:#bbb;font-weight:400;font-size:11px">(บังคับ)</span>
+        </div>
+        <div class="review-stars" id="urWriteStars" aria-label="เลือกคะแนน">
+          <button class="star" data-value="1" type="button">★</button>
+          <button class="star" data-value="2" type="button">★</button>
+          <button class="star" data-value="3" type="button">★</button>
+          <button class="star" data-value="4" type="button">★</button>
+          <button class="star" data-value="5" type="button">★</button>
+        </div>
+        <label class="review-label" for="urWriteText" style="margin-top:14px;display:block">เขียนรีวิว <span style="color:#bbb;font-weight:400">(ไม่บังคับ)</span></label>
+        <textarea id="urWriteText" rows="4" placeholder="แบ่งปันประสบการณ์ของคุณ..."></textarea>
+        <div class="modal-actions" style="margin-top:14px">
+          <button id="urSubmit" class="btn btn-cta" type="button">ส่งรีวิว</button>
+          <button class="btn btn-outline urCloseBtn" type="button">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Show price fields only for non-admin users (elements now in DOM)
+    if (typeof _isAdmin !== 'undefined' && !_isAdmin) {
+      var _addWrap = document.getElementById('priceFieldWrap');
+      if (_addWrap) _addWrap.style.display = '';
+      var _editWrap = document.getElementById('editPriceFieldWrap');
+      if (_editWrap) _editWrap.style.display = '';
+    }
+
+    // modal open/close
+    const openBtn = document.getElementById('openAddRent');
+    const overlay = document.getElementById('modalOverlay');
+    const closeBtn = document.getElementById('closeModal');
+    const cancelBtn = document.getElementById('cancelModal');
+    const form = document.getElementById('addRentForm');
+
+    function openModal(){
+      overlay.setAttribute('aria-hidden','false');
+      overlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('deviceName').focus();
+    }
+    function closeModal(){
+      overlay.setAttribute('aria-hidden','true');
+      overlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    openBtn && openBtn.addEventListener('click', openModal);
+    closeBtn && closeBtn.addEventListener('click', closeModal);
+    cancelBtn && cancelBtn.addEventListener('click', closeModal);
+    overlay && overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+
+    // simple submit handler (replace with real API call)
+    form && form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      
+      // Get token (use correct key name: access_token)
+      let token = localStorage.getItem('access_token');
+      // Fallback to getAuthToken from auth.js if available
+      if (!token && typeof getAuthToken === 'function') {
+        token = getAuthToken();
+      }
+      if (!token) {
+        alert('Please login first');
+        window.location.href = '/features/auth/login.html';
+        return;
+      }
+
+      // Collect fields
+      const deviceName = form.deviceName.value.trim();
+      const deviceType = form.deviceType.value;
+      const price = _isAdmin ? 0 : parseFloat(form.price.value);
+      const description = form.description.value.trim();
+      const imageFiles = form.images ? form.images.files : [];
+
+      if (!deviceName || !deviceType || (!_isAdmin && !price)) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      try {
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+
+        // Upload images first
+        let imageUrls = [];
+        if (imageFiles && imageFiles.length > 0) {
+          submitBtn.textContent = `Uploading ${imageFiles.length} image(s)...`;
+          try {
+            imageUrls = await uploadDeviceImages(imageFiles);
+            console.log('Images uploaded successfully:', imageUrls);
+          } catch (uploadError) {
+            console.error('Image upload failed:', uploadError);
+            alert('Failed to upload images: ' + uploadError.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+          }
+        }
+
+        // Prepare data
+        const deviceData = {
+          name: deviceName,
+          type: deviceType,
+          price: price,
+          description: description,
+          imageUrl: imageUrls.length > 0 ? JSON.stringify(imageUrls) : ''
+        };
+
+        submitBtn.textContent = 'Saving...';
+        console.log('Sending device data:', deviceData);
+
+        // Call API
+        const response = await fetch('http://localhost:3001/api/devices', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(deviceData)
+        });
+
+        console.log('Response status:', response.status, response.statusText);
+        
+        const result = await response.json();
+        console.log('Response body:', result);
+
+        if (response.ok && result.success) {
+          closeModal();
+          form.reset();
+          document.getElementById('imagePreview').innerHTML = '';
+          // Redirect to same page with success message
+          window.location.href = '/features/devices/rentout.html?added=1';
+        } else {
+          const errorMsg = result.message || result.error || 'Failed to add device';
+          console.error('Server error:', errorMsg);
+          throw new Error(errorMsg);
+        }
+      } catch (error) {
+        console.error('Error adding device:', error);
+        alert('Error: ' + error.message + '\n\nPlease check console for details.');
+        // Re-enable submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm';
+      }
+    });
+
+    // Review modal logic (history + write views)
+    const reviewOverlay = document.getElementById('reviewOverlay');
+    const closeReview = document.getElementById('closeReview');
+    const reviewLesseeName = document.getElementById('reviewLesseeName');
+    const writeLesseeName = document.getElementById('writeLesseeName');
+    const reviewStars = document.getElementById('reviewStars');
+    const reviewText = document.getElementById('reviewText');
+    const submitReview = document.getElementById('submitReview');
+    const reviewHistoryView = document.getElementById('reviewHistoryView');
+    const reviewWriteView = document.getElementById('reviewWriteView');
+    const writeReviewBtn = document.getElementById('writeReviewBtn');
+    const backToHistory = document.getElementById('backToHistory');
+    const reviewList = document.getElementById('reviewList');
+    const reviewTitle = document.getElementById('reviewTitle');
+
+    let currentReviewDeviceId = null;
+
+    function showHistoryView(){
+      reviewHistoryView.classList.remove('hidden');
+      reviewWriteView.classList.add('hidden');
+      reviewTitle.textContent = 'Device Reviews';
+    }
+
+    function showWriteView(){
+      reviewHistoryView.classList.add('hidden');
+      reviewWriteView.classList.remove('hidden');
+      reviewTitle.textContent = 'Write Review';
+      setTimeout(()=>{ reviewText.focus(); }, 50);
+    }
+
+    // Fetch reviews from DB and render them
+    async function loadDeviceReviews(deviceId) {
+      reviewList.innerHTML = '<p style="text-align:center;color:#666;padding:16px;">Loading reviews...</p>';
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${deviceId}/reviews`);
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to load reviews');
+
+        const { reviews, totalReviews, averageRating } = result.data;
+
+        // Update header with average
+        const headerEl = reviewList.closest('.review-body').querySelector('.review-lessee-name');
+        if (headerEl) headerEl.textContent = `${reviewLesseeName.textContent}`;
+        const starsHeaderEl = reviewList.closest('.review-body').querySelector('.review-stars.small');
+        if (starsHeaderEl) {
+          const avgRounded = Math.round(averageRating);
+          starsHeaderEl.innerHTML = '';
+          for (let i = 1; i <= 5; i++) {
+            const s = document.createElement('span');
+            s.textContent = '★';
+            s.style.color = i <= avgRounded ? '#FFC000' : '#ddd';
+            starsHeaderEl.appendChild(s);
+          }
+          starsHeaderEl.insertAdjacentHTML('beforeend', ` <small style="color:#666;font-size:13px;">${totalReviews} review${totalReviews !== 1 ? 's' : ''} · avg ${averageRating.toFixed(1)}</small>`);
+        }
+
+        if (!reviews || reviews.length === 0) {
+          reviewList.innerHTML = '<p style="text-align:center;color:#999;padding:16px;">No reviews yet. Be the first to review!</p>';
+          return;
+        }
+
+        reviewList.innerHTML = reviews.map(rv => {
+          const stars = '★'.repeat(rv.rating) + '☆'.repeat(5 - rv.rating);
+          const date = new Date(rv.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          const initials = rv.reviewerEmail ? rv.reviewerEmail.charAt(0).toUpperCase() : '?';
+          const maskedEmail = rv.reviewerEmail ? rv.reviewerEmail.replace(/(.{2}).+(@.+)/, '$1***$2') : 'Anonymous';
+          return `
+            <div class="review-entry">
+              <div class="entry-avatar" style="display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#fff;background:#4a90e2;">${escapeHtml(initials)}</div>
+              <div class="entry-body">
+                <div class="entry-head">
+                  <strong>${escapeHtml(maskedEmail)}</strong>
+                  <span class="entry-time">${date}</span>
+                </div>
+                <div class="entry-stars" style="color:#FFC000;">${stars}</div>
+                <div class="entry-text">${rv.description ? escapeHtml(rv.description) : '<em style="color:#999">No description</em>'}</div>
+              </div>
+            </div>`;
+        }).join('');
+
+      } catch (err) {
+        console.error('Error loading reviews:', err);
+        reviewList.innerHTML = `<p style="text-align:center;color:#d32f2f;padding:16px;">Could not load reviews: ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function openReviewModal(deviceId, deviceName){
+      currentReviewDeviceId = deviceId;
+      reviewLesseeName.textContent = deviceName || 'Device';
+      writeLesseeName.textContent = deviceName || 'Device';
+      showHistoryView();
+      // Load reviews from DB
+      if (deviceId) loadDeviceReviews(deviceId);
+      reviewOverlay.classList.add('open');
+      reviewOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReviewModal(){
+      currentReviewDeviceId = null;
+      reviewOverlay.classList.remove('open');
+      reviewOverlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      reviewText.value = '';
+      Array.from(document.querySelectorAll('.review-stars .star, .review-stars button.star')).forEach(s=>s.classList.remove('active'));
+      showHistoryView();
+    }
+
+    // click handler for review buttons: pass deviceId and device name
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btn-review');
+      if(!btn) return;
+      const card = btn.closest('.rentout-card');
+      if (!card) return;
+      // Support both data-id (on card) and data-device-id (on button)
+      const deviceId = card.dataset.id || btn.dataset.deviceId;
+      const deviceName = card.querySelector('.device-name')?.textContent || card.dataset.name || 'Device';
+      openReviewModal(deviceId, deviceName);
+    });
+
+    closeReview && closeReview.addEventListener('click', closeReviewModal);
+    reviewOverlay && reviewOverlay.addEventListener('click', (e)=>{ if(e.target === reviewOverlay) closeReviewModal(); });
+
+    // star rating behavior (write view)
+    reviewStars && reviewStars.addEventListener('click', (e)=>{
+      const star = e.target.closest('.star');
+      if(!star) return;
+      const val = parseInt(star.dataset.value,10);
+      Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>{
+        s.classList.toggle('active', parseInt(s.dataset.value,10) <= val);
+      });
+    });
+
+    // toggle to write view
+    writeReviewBtn && writeReviewBtn.addEventListener('click', ()=>{
+      showWriteView();
+    });
+
+    backToHistory && backToHistory.addEventListener('click', ()=>{
+      showHistoryView();
+    });
+
+    // submit review: POST to DB
+    submitReview && submitReview.addEventListener('click', async ()=>{
+      const stars = reviewStars.querySelectorAll('.star.active').length;
+      const text = reviewText.value.trim();
+
+      if (!stars) {
+        alert('Please select a star rating before submitting.');
+        return;
+      }
+      if (!currentReviewDeviceId) {
+        alert('No device selected for review.');
+        return;
+      }
+
+      let token = localStorage.getItem('access_token');
+      if (!token && typeof getAuthToken === 'function') token = getAuthToken();
+      if (!token) {
+        alert('Please login to submit a review.');
+        return;
+      }
+
+      submitReview.disabled = true;
+      submitReview.textContent = 'Saving...';
+
+      try {
+        const res = await fetch(`http://localhost:3001/api/devices/${currentReviewDeviceId}/reviews`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ rating: stars, description: text })
+        });
+
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'Failed to save review');
+
+        // Reload reviews from DB
+        showHistoryView();
+        await loadDeviceReviews(currentReviewDeviceId);
+        reviewText.value = '';
+        Array.from(reviewStars.querySelectorAll('.star')).forEach(s => s.classList.remove('active'));
+        alert('✅ Thank you for your review!');
+      } catch (err) {
+        console.error('Error submitting review:', err);
+        alert('Error: ' + err.message);
+      } finally {
+        submitReview.disabled = false;
+        submitReview.textContent = 'Confirm';
+      }
+    });
+
+    // Confirm modal logic for requested items
+    const confirmOverlay = document.getElementById('confirmOverlay');
+    const closeConfirm = document.getElementById('closeConfirm');
+    const confirmDevice = document.getElementById('confirmDevice');
+    const confirmLessee = document.getElementById('confirmLessee');
+    const confirmAccept = document.getElementById('confirmAccept');
+    const confirmCancel = document.getElementById('confirmCancel');
+    let currentConfirmCard = null;
+
+    // open confirm modal with card info
+    function openConfirmModal(card){
+      currentConfirmCard = card;
+      const device = card.querySelector('.device-name')?.textContent || '';
+      const lessee = card.dataset.lessee || card.querySelector('.lessee-name')?.textContent || '';
+      confirmDevice.textContent = device;
+      confirmLessee.textContent = lessee;
+      confirmOverlay.classList.add('open');
+      confirmOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeConfirmModal(){
+      confirmOverlay.classList.remove('open');
+      confirmOverlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      currentConfirmCard = null;
+    }
+
+    // handle click on small Confirm buttons in cards
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btn-confirm');
+      if(!btn) return;
+      const card = btn.closest('.rentout-card');
+      if(!card) return;
+      openConfirmModal(card);
+    });
+
+    closeConfirm && closeConfirm.addEventListener('click', closeConfirmModal);
+    confirmCancel && confirmCancel.addEventListener('click', closeConfirmModal);
+    confirmOverlay && confirmOverlay.addEventListener('click', (e)=>{ if(e.target === confirmOverlay) closeConfirmModal(); });
+
+    // Accept confirmation: mark as rented (demo)
+    confirmAccept && confirmAccept.addEventListener('click', ()=>{
+      if(!currentConfirmCard) return closeConfirmModal();
+      currentConfirmCard.dataset.status = 'rented';
+      const badge = currentConfirmCard.querySelector('.badge');
+      if(badge){ badge.className = 'badge badge-rented'; badge.textContent = 'Rented'; }
+      // remove confirm button
+      const cbtn = currentConfirmCard.querySelector('.btn-confirm');
+      if(cbtn) cbtn.remove();
+      closeConfirmModal();
+      alert('Request confirmed. Status updated to Rented.');
+    });
+
+    // Device card click to view details
+    document.addEventListener('click', (e)=>{
+      // Check if clicking on a card but not on buttons or interactive elements
+      const card = e.target.closest('.rentout-card');
+      if (!card) return;
+      
+      // Don't navigate if clicking on buttons or interactive elements
+      if (e.target.closest('button') || e.target.closest('a') || e.target.closest('.btn') ||
+          e.target.closest('select') || e.target.closest('input') || e.target.closest('label')) {
+        return;
+      }
+      
+      // Get device info
+      const deviceId = card.dataset.id;
+      const deviceName = card.querySelector('.device-name')?.textContent || 'Device';
+      
+      // Navigate to device detail page
+      if (deviceId) {
+        const url = '/features/devices/rentdevice.html?id=' + encodeURIComponent(deviceId) + '&name=' + encodeURIComponent(deviceName);
+        window.location.href = url;
+      }
+    });
+  </script>
+
+  <!-- ── Chat Notification Bell Logic ───────────────────────────────────────── -->
+  <script>
+  (function () {
+    const API = 'http://localhost:3001';
+
+    const bellBtn   = document.getElementById('notifBellBtn');
+    const countEl   = document.getElementById('notifCount');
+    const dropdown  = document.getElementById('notifDropdown');
+    const listEl    = document.getElementById('notifList');
+    const markAllBtn= document.getElementById('notifMarkAll');
+
+    let notifOpen = false;
+    let pollTimer = null;
+
+    function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function timeAgo(iso) {
+      const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
+      if (diff < 60)   return 'เมื่อกี้';
+      if (diff < 3600) return Math.floor(diff/60) + ' นาทีที่แล้ว';
+      if (diff < 86400)return Math.floor(diff/3600) + ' ชั่วโมงที่แล้ว';
+      return Math.floor(diff/86400) + ' วันที่แล้ว';
+    }
+
+    function renderNotifs(items, unread) {
+      // Badge
+      if (unread > 0) {
+        countEl.textContent = unread > 99 ? '99+' : unread;
+        countEl.classList.add('has-new');
+      } else {
+        countEl.classList.remove('has-new');
+      }
+
+      if (!items || items.length === 0) {
+        listEl.innerHTML = '<div class="notif-empty">ยังไม่มีการแจ้งเตือน</div>';
+        return;
+      }
+
+      listEl.innerHTML = items.map(n => {
+        const renterFromRoom = (() => { const m = String(n.roomName || '').match(/dev-\d+-u-(\d+)/); return m ? m[1] : ''; })();
+        const chatUrl = `/features/chat/rental-chat.html?deviceId=${encodeURIComponent(n.deviceId)}&deviceName=${encodeURIComponent(n.deviceName)}&room=${encodeURIComponent(n.roomName)}&skipModal=1${renterFromRoom ? '&renterId=' + encodeURIComponent(renterFromRoom) : ''}${n.requestNo ? '&requestNo=' + encodeURIComponent(n.requestNo) : ''}`;    
+        return `<a class="notif-item ${n.isRead ? '' : 'unread'}" href="${chatUrl}"
+                   data-notif-id="${n.notifId}">
+          <span class="notif-dot"></span>
+          <div class="notif-body">
+            <div class="notif-device">${escH(n.deviceName || 'อุปกรณ์')}</div>
+            <div class="notif-sender">จาก ${escH(n.senderName)}</div>
+            <div class="notif-preview">${escH(n.preview)}</div>
+          </div>
+          <div class="notif-time">${timeAgo(n.createdAt)}</div>
+        </a>`;
+      }).join('');
+
+      // Mark single notif read when clicked
+      listEl.querySelectorAll('.notif-item').forEach(el => {
+        el.addEventListener('click', async () => {
+          const nid = parseInt(el.dataset.notifId, 10);
+          if (nid) await markRead(nid);
+        });
+      });
+    }
+
+    async function fetchNotifs() {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      try {
+        const res = await fetch(`${API}/api/chat/notifications`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderNotifs(data.notifications || [], data.unread || 0);
+      } catch (_) {}
+    }
+
+    async function markRead(notifId) {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      try {
+        await fetch(`${API}/api/chat/notifications/read`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify(notifId ? { notifId } : {}),
+        });
+        fetchNotifs();
+      } catch (_) {}
+    }
+
+    markAllBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await markRead(0);
+    });
+
+    bellBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notifOpen = !notifOpen;
+      dropdown.classList.toggle('open', notifOpen);
+      dropdown.setAttribute('aria-hidden', String(!notifOpen));
+      if (notifOpen) fetchNotifs();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (notifOpen && !document.getElementById('notifBellWrap').contains(e.target)) {
+        notifOpen = false;
+        dropdown.classList.remove('open');
+        dropdown.setAttribute('aria-hidden', 'true');
+      }
+    });
+
+    // Use WebSocket notification push if user is connected to general room
+    function connectNotifWS() {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      const ws = new WebSocket(`ws://localhost:3001/api/chat/ws?token=${encodeURIComponent(token)}&room=general`);
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+          if (msg.type === 'notification') {
+            fetchNotifs(); // refresh badge + list
+          }
+        } catch (_) {}
+      };
+      ws.onclose = () => {
+        // Reconnect after 10s
+        setTimeout(connectNotifWS, 10000);
+      };
+    }
+
+    // Initial load + periodic poll (fallback if WS not connected)
+    fetchNotifs();
+    pollTimer = setInterval(fetchNotifs, 30000);
+    connectNotifWS();
+  })();
+  </script>
+
+  <script>
+  // ── User-to-User Review Modal ─────────────────────────────────────────────
+  (function () {
+    const overlay    = document.getElementById('userReviewOverlay');
+    if (!overlay) return;
+
+    const titleEl    = document.getElementById('urTitle');
+    const loading    = document.getElementById('urLoading');
+    const done       = document.getElementById('urDone');
+    const blocked    = document.getElementById('urBlocked');
+    const write      = document.getElementById('urWrite');
+    const writeName  = document.getElementById('urWriteName');
+    const writeRole  = document.getElementById('urWriteRole');
+    const starsEl        = document.getElementById('urWriteStars');
+    const textEl         = document.getElementById('urWriteText');
+    const submitBtn      = document.getElementById('urSubmit');
+    const doneStars      = document.getElementById('urDoneStars');
+    const doneDesc       = document.getElementById('urDoneDesc');
+    const blockedMsg     = document.getElementById('urBlockedMsg');
+    const blockedStat    = document.getElementById('urBlockedStatus');
+    const deviceStarsEl      = document.getElementById('urDeviceStars');
+    const deviceStarsSection = document.getElementById('urDeviceStarsSection');
+    const personLabel        = document.getElementById('urPersonLabel');
+
+    let activeRequestNo = null;
+    let activeDeviceNo  = 0;
+    let activeRole      = '';
+
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function showOnly(el){ [loading,done,blocked,write].forEach(v=>v&&v.classList.toggle('hidden',v!==el)); }
+
+    const STATUS_TH = {
+      'Request Pending'  : 'รอการยืนยัน',
+      'Booking Confirmed': 'ยืนยันแล้ว – รอรับอุปกรณ์',
+      'Rental Active'    : 'กำลังเช่า (รับอุปกรณ์แล้ว)',
+      'Rental Completed' : 'คืนอุปกรณ์แล้ว',
+    };
+
+    function openModal(requestNo, deviceNo, otherName, role) {
+      activeRequestNo = requestNo;
+      activeDeviceNo  = deviceNo || 0;
+      activeRole      = role || '';
+      if (writeName)   writeName.textContent   = otherName;
+      if (writeRole)   writeRole.textContent   = role === 'renter' ? '(เจ้าของอุปกรณ์)' : '(ผู้เช่าอุปกรณ์)';
+      if (titleEl)     titleEl.textContent     = role === 'renter' ? '⭐ รีวิวเจ้าของ' : '⭐ รีวิวผู้เช่า';
+      if (personLabel) personLabel.textContent = role === 'renter' ? 'เจ้าของอุปกรณ์' : 'ผู้เช่า';
+      // แสดง device stars เฉพาะผู้เช่า (renter) เท่านั้น
+      if (deviceStarsSection) deviceStarsSection.style.display = role === 'renter' ? '' : 'none';
+      if (starsEl)     Array.from(starsEl.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+      if (deviceStarsEl) Array.from(deviceStarsEl.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+      if (textEl)      textEl.value = '';
+      showOnly(loading);
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      checkEligibility(requestNo);
+    }
+
+    async function checkEligibility(requestNo) {
+      const token = localStorage.getItem('access_token') || '';
+      try {
+        const res = await fetch('/api/reviews/eligibility?requestNo=' + requestNo, {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        const result = await res.json();
+        const d = (result.data !== undefined) ? result.data : result;
+        if (d.alreadyReviewed) {
+          if (doneStars) doneStars.textContent = '';
+          if (doneDesc)  doneDesc.textContent  = 'คุณได้ส่งรีวิวสำหรับรายการนี้แล้ว';
+          showOnly(done);
+        } else if (d.canReview) {
+          showOnly(write);
+        } else {
+          if (blockedMsg)  blockedMsg.textContent  = d.reason || 'ยังไม่ถึงเงื่อนไขการรีวิว';
+          if (blockedStat) blockedStat.textContent = d.currentStatus
+            ? 'สถานะ: ' + (STATUS_TH[d.currentStatus] || d.currentStatus) : '';
+          showOnly(blocked);
+        }
+      } catch (e) {
+        if (blockedMsg)  blockedMsg.textContent  = 'โหลดข้อมูลไม่สำเร็จ — กรุณาลองใหม่';
+        if (blockedStat) blockedStat.textContent = esc(e.message || '');
+        showOnly(blocked);
+      }
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      activeRequestNo = null;
+      activeDeviceNo  = 0;
+      activeRole      = '';
+    }
+
+    // Person star rating
+    starsEl && starsEl.addEventListener('click', e => {
+      const s = e.target.closest('.star');
+      if (!s) return;
+      const val = parseInt(s.dataset.value, 10);
+      Array.from(starsEl.querySelectorAll('.star')).forEach(st =>
+        st.classList.toggle('active', parseInt(st.dataset.value, 10) <= val)
+      );
+    });
+
+    // Device star rating
+    deviceStarsEl && deviceStarsEl.addEventListener('click', e => {
+      const s = e.target.closest('.star');
+      if (!s) return;
+      const val = parseInt(s.dataset.value, 10);
+      Array.from(deviceStarsEl.querySelectorAll('.star')).forEach(st =>
+        st.classList.toggle('active', parseInt(st.dataset.value, 10) <= val)
+      );
+    });
+
+    // Submit
+    submitBtn && submitBtn.addEventListener('click', async () => {
+      const isRenter    = activeRole === 'renter';
+      const deviceStars = deviceStarsEl ? deviceStarsEl.querySelectorAll('.star.active').length : 0;
+      const personStars = starsEl       ? starsEl.querySelectorAll('.star.active').length       : 0;
+      const text        = textEl        ? textEl.value.trim()                                   : '';
+      if (isRenter && !deviceStars) { alert('กรุณาเลือกคะแนนอุปกรณ์ (1–5 ดาว)'); return; }
+      if (!personStars)             { alert('กรุณาเลือกคะแนนบุคคล (1–5 ดาว)'); return; }
+      if (!activeRequestNo)         { alert('ไม่พบรายการเช่า'); return; }
+      const token = localStorage.getItem('access_token') || '';
+      if (!token) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+      submitBtn.disabled    = true;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      try {
+        // 1️⃣ บันทึกคะแนนอุปกรณ์ (เฉพาะผู้เช่า) → Review table → trigger อัพเดท Device.Rating อัตโนมัติ
+        if (isRenter && activeDeviceNo) {
+          const devRes = await fetch(`/api/devices/${activeDeviceNo}/reviews`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: deviceStars, description: '' })
+          });
+          if (!devRes.ok) {
+            const d = await devRes.json().catch(()=>({}));
+            console.warn('Device review warning:', d.message || 'HTTP ' + devRes.status);
+          }
+        }
+        // 2️⃣ บันทึกคะแนนบุคคล → UserReview table
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestNo: activeRequestNo, rating: personStars, description: text })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'บันทึกไม่สำเร็จ');
+        if (doneStars) doneStars.textContent = '★'.repeat(personStars) + '☆'.repeat(5 - personStars);
+        if (doneDesc)  doneDesc.textContent  = text || '(ไม่มีข้อความรีวิว)';
+        showOnly(done);
+      } catch (e) {
+        alert('ไม่สำเร็จ: ' + esc(e.message));
+      } finally {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'ส่งรีวิว';
+      }
+    });
+
+    // Close handlers
+    document.getElementById('urClose') && document.getElementById('urClose').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay)           closeModal();
+      if (e.target.closest('.urCloseBtn')) closeModal();
+    });
+
+    // Delegate for .btn-user-review-req buttons (incoming/outgoing request cards)
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.btn-user-review-req');
+      if (!btn) return;
+      const requestNo = parseInt(btn.dataset.requestNo, 10);
+      const deviceNo  = parseInt(btn.dataset.deviceNo, 10) || 0;
+      if (requestNo) openModal(requestNo, deviceNo, btn.dataset.otherName || '-', btn.dataset.role || 'renter');
+    });
+
+    window.openUserReviewModal = openModal;
+  })();
+  </script>
+ </body>
+</html>

@@ -1,0 +1,976 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notelet — Device History</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat-notifications.js"></script>
+  <style>
+    /* Borrow cards on history page: blue background + white text */
+    .rentout-card.borrow-card{ box-shadow:0px 4px 4px rgba(0,0,0,0.25); }
+    .rentout-card.borrow-card .card-content{ background:var(--primary); border-bottom-left-radius:12px; border-bottom-right-radius:12px; }
+    .rentout-card.borrow-card .device-name,
+    .rentout-card.borrow-card .meta.small,
+    .rentout-card.borrow-card .lessee-name{ color:#fff; }
+    .rentout-card.borrow-card .card-divider{ background:rgba(255,255,255,0.65); }
+    .rentout-card.borrow-card .badge{ background:rgba(255,255,255,0.18); color:#fff; }
+    .rentout-card.borrow-card .avatar{ background:transparent; border:6px solid #fff; box-shadow:none; }
+
+    /* History tabs */
+    .history-tabs{ display:flex; gap:0; margin-bottom:28px; border-bottom:2px solid #e5e7eb; }
+    .tab-btn{ background:none; border:none; padding:11px 24px; font-size:15px; font-weight:500; color:#6b7280; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color 0.18s,border-color 0.18s; }
+    .tab-btn.active{ color:var(--primary,#2563eb); border-bottom-color:var(--primary,#2563eb); font-weight:700; }
+    .tab-btn:hover:not(.active){ color:#374151; }
+
+    /* Action buttons inside cards */
+    .card-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .btn-action-primary{ background:var(--primary,#2563eb); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity 0.18s; }
+    .btn-action-primary:hover:not(:disabled){ opacity:0.85; }
+    .btn-action-primary:disabled{ opacity:0.5; cursor:not-allowed; }
+    .btn-action-secondary{ background:#fff; color:var(--primary,#2563eb); border:1.5px solid var(--primary,#2563eb); border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; transition:background 0.18s; }
+    .btn-action-secondary:hover:not(:disabled){ background:#eff6ff; }
+    .btn-action-secondary:disabled{ opacity:0.5; cursor:not-allowed; }
+    .btn-chat-hist{ background:#f1f5f9; color:#374151; border:1px solid #d1d5db; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+    .btn-chat-hist:hover{ background:#e2e8f0; }
+
+    /* Loading / empty states */
+    .history-loading{ text-align:center; padding:56px 0; color:#9ca3af; font-size:15px; grid-column:1/-1; }
+    .btn-user-review-req {
+      background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; border:none;
+      border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; transition:opacity .18s;
+    }
+    .btn-user-review-req:hover { opacity:.85; }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="logo" aria-label="Notelet home">
+        <div class="logo-mark" aria-hidden></div>
+        <div class="logo-text">NOTELET</div>
+      </a>
+      <nav class="nav">
+        <a href="/features/auth/devices-auth.html">ค้นหาอุปกรณ์</a>
+        <a href="/features/devices/rentout.html">จัดการอุปกรณ์</a>
+        <a href="/features/devices/devicehistory.html" class="active">ประวัติการยืม</a>
+      </nav>
+      <div class="header-actions" id="headerActions">
+        <a href="/features/auth/login.html" class="btn-login">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="rentout-page">
+    <div class="container">
+      <section class="rentout-head centered">
+        <h1>ประวัติการยืม</h1>
+      </section>
+
+      <!-- Tab switcher -->
+      <div class="history-tabs" role="tablist">
+        <button class="tab-btn active" data-tab="renter" role="tab" aria-selected="true">การยืมของฉัน</button>
+        <button class="tab-btn" data-tab="owner" role="tab" aria-selected="false">อุปกรณ์ที่ให้ยืม</button>
+      </div>
+
+      <section class="rentout-list">
+        <div id="historyCards" class="rentout-cards three-up" aria-live="polite">
+          <div class="history-loading">กำลังโหลด...</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Review Modal (same UI as rentout page) -->
+  <div id="reviewOverlay" class="review-overlay" aria-hidden="true">
+    <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+      <button class="modal-close" id="closeReview" aria-label="Close">&times;</button>
+      <h3 id="reviewTitle">Review History</h3>
+
+      <!-- HISTORY VIEW -->
+      <div class="review-body review-history" id="reviewHistoryView">
+        <div class="review-lessee header">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="reviewLesseeName">Lessor Name</div>
+            <div class="review-stars small" aria-hidden>
+              <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="review-list" id="reviewList">
+          <!-- sample entries (demo) -->
+          <div class="review-entry">
+            <div class="entry-avatar"></div>
+            <div class="entry-body">
+              <div class="entry-head">
+                <strong>Helen M.</strong>
+                <span class="entry-time">Yesterday</span>
+              </div>
+              <div class="entry-stars">★ ★ ★ ★ ★</div>
+              <div class="entry-text">Excellent device. Works perfectly.</div>
+              <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">42</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions history-actions">
+          <button id="writeReviewBtn" class="btn btn-cta">Write your review</button>
+        </div>
+      </div>
+
+      <!-- WRITE VIEW (hidden by default) -->
+      <div class="review-body review-write hidden" id="reviewWriteView">
+        <div class="review-lessee header">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="writeLesseeName">Lessor Name</div>
+          </div>
+        </div>
+
+        <div class="review-stars" id="reviewStars" aria-hidden>
+          <button class="star" data-value="1">★</button>
+          <button class="star" data-value="2">★</button>
+          <button class="star" data-value="3">★</button>
+          <button class="star" data-value="4">★</button>
+          <button class="star" data-value="5">★</button>
+        </div>
+
+        <label for="reviewText" class="review-label">Write your review</label>
+        <textarea id="reviewText" rows="6" placeholder="Write your review"></textarea>
+
+        <div class="modal-actions">
+          <button id="submitReview" class="btn btn-cta" type="button">Confirm</button>
+          <button id="backToHistory" class="btn btn-outline" type="button">Back</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Require authentication
+    if (typeof NoteLetAuth !== 'undefined') {
+      NoteLetAuth.requireAuth();
+    }
+  </script>
+  <script>
+    /* ─── devicehistory.html  —  API-driven history with lifecycle actions ─── */
+    (function () {
+      'use strict';
+
+      /* ── Helpers ────────────────────────────────────────────────────────── */
+      function esc(s) {
+        return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+
+      function fmtDate(d) {
+        if (!d) return '';
+        try { return new Date(d).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' }); }
+        catch (e) { return String(d); }
+      }
+
+      /* ── Status → Thai label + CSS badge class ──────────────────────────── */
+      const STATUS_MAP = {
+        'Request Pending'   : { label: 'รอการยืนยัน',                cls: 'badge-pending' },
+        'Booking Confirmed' : { label: 'ยืนยันแล้ว – รอรับอุปกรณ์',  cls: 'badge-confirmed' },
+        'Rental Active'     : { label: 'กำลังยืม (รับอุปกรณ์แล้ว)',  cls: 'badge-rental-active' },
+        'Rental Completed'  : { label: 'คืนอุปกรณ์แล้ว (เสร็จสิ้น)', cls: 'badge-completed' },
+        'rejected'          : { label: 'ถูกปฏิเสธ',                  cls: 'badge-late' },
+        'cancelled'         : { label: 'ยกเลิกแล้ว',                  cls: 'badge-completed' },
+      };
+
+      function statusBadge(status) {
+        const s = STATUS_MAP[status] || { label: status, cls: 'badge-active' };
+        return `<span class="badge ${s.cls}">${esc(s.label)}</span>`;
+      }
+
+      /* ── State ───────────────────────────────────────────────────────────── */
+      let currentTab  = 'renter';
+      let renterData  = [];
+      let ownerData   = [];
+
+      /* ── Data loading ────────────────────────────────────────────────────── */
+      async function loadData() {
+        const grid = document.getElementById('historyCards');
+        grid.innerHTML = '<div class="history-loading">กำลังโหลด...</div>';
+        const token = localStorage.getItem('access_token') || '';
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+        try {
+          const [outRes, incRes] = await Promise.all([
+            fetch('/api/rental-requests/outgoing', { headers }),
+            fetch('/api/rental-requests/incoming', { headers }),
+          ]);
+          const [out, inc] = await Promise.all([outRes.json(), incRes.json()]);
+          renterData = Array.isArray(out.data) ? out.data : [];
+          ownerData  = Array.isArray(inc.data) ? inc.data  : [];
+        } catch (e) {
+          grid.innerHTML = '<div class="history-loading">เกิดข้อผิดพลาดในการโหลดข้อมูล — กรุณาลองใหม่</div>';
+          console.error(e);
+          return;
+        }
+
+        /* Auto-select tab: honour ?tab= param, then default to whichever side has data */
+        const urlTab = new URLSearchParams(window.location.search).get('tab');
+        if (urlTab === 'owner' || urlTab === 'renter') {
+          currentTab = urlTab;
+        } else if (ownerData.length > 0 && renterData.length === 0) {
+          currentTab = 'owner';
+        }
+        /* Sync tab button UI */
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          const active = b.dataset.tab === currentTab;
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', String(active));
+        });
+        renderTab(currentTab);
+      }
+
+      /* ── Rendering ───────────────────────────────────────────────────────── */
+      function renderTab(tab) {
+        currentTab = tab;
+        const grid = document.getElementById('historyCards');
+        const data  = tab === 'renter' ? renterData : ownerData;
+
+        if (!data.length) {
+          grid.innerHTML = '<p class="history-loading">ยังไม่มีรายการ</p>';
+          return;
+        }
+        grid.innerHTML = '';
+        data.forEach(item => grid.appendChild(buildCard(item, tab === 'owner')));
+      }
+
+      function buildCard(item, isOwner) {
+        const el = document.createElement('article');
+        el.className = 'rentout-card';
+        el.dataset.requestno = item.requestNo;
+        el.dataset.deviceno  = item.deviceNo;
+        el.dataset.status    = item.status || '';
+
+        const otherName  = esc(isOwner ? (item.renterName || item.renterEmail || '') : (item.ownerName || item.ownerEmail || ''));
+        const otherRole  = isOwner ? 'ผู้ยืม' : 'เจ้าของ';
+        const totalText  = typeof item.totalPrice === 'number' ? `${item.totalPrice.toFixed(2)} บาท` : '';
+
+        /* Action buttons */
+        let actionBtns = '';
+        if (isOwner) {
+          if (item.status === 'Booking Confirmed') {
+            actionBtns += `<button class="btn-action-primary btn-mark-active" data-id="${item.requestNo}">✓ ส่งอุปกรณ์ให้ผู้ยืมแล้ว</button>`;
+          }
+          if (item.status === 'Booking Confirmed' || item.status === 'Rental Active') {
+            actionBtns += `<button class="btn-action-secondary btn-mark-returned" data-id="${item.requestNo}">✓ รับคืนอุปกรณ์แล้ว</button>`;
+          }
+        } else {
+          /* Renter can cancel while still pending */
+          if (item.status === 'Request Pending') {
+            actionBtns += `<button class="btn-action-secondary btn-cancel-req" data-id="${item.requestNo}" style="color:#dc2626;border-color:#dc2626;">✕ ยกเลิกคำขอ</button>`;
+          }
+        }
+
+        const chatBtn   = `<button class="btn-chat-hist btn-open-แชท" data-deviceno="${item.deviceNo}" onclick="window.location.href='/features/devices/manage.html">💬 แชท</button>`;
+        let reviewBtn = '';
+        if (!isOwner && (item.status === 'Rental Active' || item.status === 'Rental Completed')) {
+          const _ownerNm = esc(item.ownerName || item.ownerEmail || 'เจ้าของ');
+          reviewBtn = `<button class="btn-action-secondary btn-user-review-req" data-request-no="${item.requestNo}" data-device-no="${item.deviceNo}" data-other-name="${_ownerNm}" data-role="renter" type="button">⭐ รีวิวเจ้าของ</button>`;
+        } else if (isOwner && item.status === 'Rental Completed') {
+          const _renterNm = esc(item.renterName || item.renterEmail || 'ผู้เช่า');
+          reviewBtn = `<button class="btn-action-secondary btn-user-review-req" data-request-no="${item.requestNo}" data-device-no="${item.deviceNo}" data-other-name="${_renterNm}" data-role="owner" type="button">⭐ รีวิวผู้เช่า</button>`;
+        }
+
+        const actionsBlock = (actionBtns || chatBtn || reviewBtn)
+          ? `<div class="card-actions">${actionBtns}${chatBtn}${reviewBtn}</div>` : '';
+
+        el.innerHTML = `
+          <div class="card-media-large" aria-hidden></div>
+          <div class="card-content">
+            <h3 class="device-name">${esc(item.deviceName || '')}</h3>
+            <div class="meta small">สถานะ · ${statusBadge(item.status)}</div>
+            ${item.startDate ? `<div class="meta small">วันเริ่ม · ${esc(fmtDate(item.startDate))}</div>` : ''}
+            ${item.endDate   ? `<div class="meta small">วันสิ้นสุด · ${esc(fmtDate(item.endDate))}</div>` : ''}
+            ${item.pickupTime ? `<div class="meta small">เวลารับ · ${esc(item.pickupTime)}</div>` : ''}
+            ${item.returnTime ? `<div class="meta small">เวลาคืน · ${esc(item.returnTime)}</div>` : ''}
+            ${totalText ? `<div class="meta small">ราคารวม · ${esc(totalText)}</div>` : ''}
+            <div class="card-divider"></div>
+            <div class="card-footer">
+              <div class="avatar" aria-hidden></div>
+              <div class="lessee">
+                <div class="lessee-name">${otherName}</div>
+                <div class="meta small">${otherRole}</div>
+              </div>
+            </div>
+            ${actionsBlock}
+          </div>`;
+
+        if (item.imageUrl) {
+          const media = el.querySelector('.card-media-large');
+          if (media) {
+            let imgUrl = String(item.imageUrl);
+            if (imgUrl.startsWith('[')) { try { const a = JSON.parse(imgUrl); imgUrl = a[0] || ''; } catch(e) {} }
+            if (imgUrl) {
+              media.style.backgroundImage = `url("${imgUrl.replace(/"/g, '\\"')}")`;
+              media.style.backgroundSize = 'cover';
+              media.style.backgroundPosition = 'center';
+            }
+          }
+        }
+        return el;
+      }
+
+      /* ── Lifecycle actions ───────────────────────────────────────────────── */
+      async function markActive(requestNo, btn) {
+        if (!confirm('ยืนยันว่าได้ส่งอุปกรณ์ให้ผู้ยืมแล้ว?')) return;
+        btn.disabled = true;
+        const orig = btn.textContent;
+        btn.textContent = 'กำลังบันทึก...';
+        try {
+          const token = localStorage.getItem('access_token') || '';
+          const res = await fetch(`/api/rental-requests/${requestNo}/active`, {
+            method: 'PATCH',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+          });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'HTTP ' + res.status); }
+          await loadData();
+        } catch (e) {
+          alert('เกิดข้อผิดพลาด: ' + (e.message || 'กรุณาลองใหม่'));
+          btn.disabled = false;
+          btn.textContent = orig;
+        }
+      }
+
+      async function markReturned(requestNo, btn) {
+        if (!confirm('ยืนยันว่าได้รับคืนอุปกรณ์แล้ว? การดำเนินการนี้จะสิ้นสุดการยืม')) return;
+        btn.disabled = true;
+        const orig = btn.textContent;
+        btn.textContent = 'กำลังบันทึก...';
+        try {
+          const token = localStorage.getItem('access_token') || '';
+          const res = await fetch(`/api/rental-requests/${requestNo}/returned`, {
+            method: 'PATCH',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+          });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'HTTP ' + res.status); }
+          await loadData();
+        } catch (e) {
+          alert('เกิดข้อผิดพลาด: ' + (e.message || 'กรุณาลองใหม่'));
+          btn.disabled = false;
+          btn.textContent = orig;
+        }
+      }
+
+      async function cancelRequest(requestNo, btn) {
+        if (!confirm('ยืนยันการยกเลิกคำขอยืม/เช่านี้?')) return;
+        btn.disabled = true;
+        const orig = btn.textContent;
+        btn.textContent = 'กำลังยกเลิก...';
+        try {
+          const token = localStorage.getItem('access_token') || '';
+          const res = await fetch(`/api/rental-requests/${requestNo}/cancel`, {
+            method: 'PATCH',
+            headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+          });
+          if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.message || 'HTTP ' + res.status); }
+          await loadData();
+        } catch (e) {
+          alert('เกิดข้อผิดพลาด: ' + (e.message || 'กรุณาลองใหม่'));
+          btn.disabled = false;
+          btn.textContent = orig;
+        }
+      }
+
+      /* ── Event wiring ────────────────────────────────────────────────────── */
+      // Tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+          btn.classList.add('active');
+          btn.setAttribute('aria-selected','true');
+          renderTab(btn.dataset.tab);
+        });
+      });
+
+      // Card button delegation
+      document.getElementById('historyCards').addEventListener('click', e => {
+        const activeBtn = e.target.closest('.btn-mark-active');
+        if (activeBtn) { markActive(Number(activeBtn.dataset.id), activeBtn); return; }
+
+        const returnBtn = e.target.closest('.btn-mark-returned');
+        if (returnBtn) { markReturned(Number(returnBtn.dataset.id), returnBtn); return; }
+
+        const cancelBtn = e.target.closest('.btn-cancel-req');
+        if (cancelBtn) { cancelRequest(Number(cancelBtn.dataset.id), cancelBtn); return; }
+
+        const chatBtn = e.target.closest('.btn-open-แชท');
+        if (chatBtn) {
+          window.location.href = `/features/devices/manage.html`;
+          return;
+        }
+
+        /* Review button — open user review modal */
+        const reviewBtn = e.target.closest('.btn-user-review-req');
+        if (reviewBtn) {
+          const requestNo = parseInt(reviewBtn.dataset.requestNo, 10);
+          const deviceNo  = parseInt(reviewBtn.dataset.deviceNo,  10) || 0;
+          const otherName = reviewBtn.dataset.otherName || '-';
+          const role = reviewBtn.dataset.role || 'renter';
+          if (requestNo && typeof window.openUserReviewModal === 'function') {
+            window.openUserReviewModal(requestNo, deviceNo, otherName, role);
+          }
+          return;
+        }
+      });
+
+      /* ── Boot ─────────────────────────────────────────────────────────────── */
+      loadData();
+    })();
+
+    // Make the history start empty until the user checks out.
+    // This clears any previously-saved demo history ONE time.
+    (function(){
+      try{
+        if(!localStorage.getItem(HISTORY_INIT_KEY)){
+          localStorage.setItem(HISTORY_KEY, '[]');
+          localStorage.setItem(HISTORY_INIT_KEY, '1');
+        }
+      }catch(e){}
+    })();
+
+    function getHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; } }
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    function normalize(it){
+      const source = it?.source || 'rent';
+      return {
+        id: it?.id,
+        source,
+        name: it?.name || 'Device Name',
+        price: it?.price || '',
+        image: it?.image || it?.img || '',
+        status: it?.status || 'Completed',
+        date: it?.date || '',
+        pickup: it?.pickup || '',
+        returnt: it?.returnt || '',
+        location: it?.location || 'Pick up or return Location',
+        total: (typeof it?.total === 'number') ? it.total : null,
+        days: (typeof it?.days === 'number') ? it.days : null,
+        lessor: it?.lessor || (source === 'borrow' ? 'CSKMITL' : 'Lessor Name')
+      };
+    }
+
+    function splitDates(dateText){
+      const raw = String(dateText || '').trim();
+      if(!raw) return { pick:'', ret:'' };
+      const parts = raw.split(' - ').map(s=>s.trim()).filter(Boolean);
+      if(parts.length === 1) return { pick: parts[0], ret: '' };
+      return { pick: parts[0], ret: parts[1] };
+    }
+
+    function badgeClass(status){
+      const s = String(status || '').trim().toLowerCase();
+      if(s === 'requested') return 'badge-active';
+      if(s === 'rented') return 'badge-rented';
+      if(s === 'returned') return 'badge-returned';
+      if(s === 'completed') return 'badge-returned';
+      return 'badge-active';
+    }
+
+    function durationLabel(source){
+      return source === 'borrow' ? 'Borrowing Duration' : 'Renting Duration';
+    }
+
+    function render(){
+      const grid = document.getElementById('historyCards');
+      const items = getHistory().map(normalize);
+
+      if(!items.length){
+        grid.innerHTML = '<p class="meta small" style="grid-column:1/-1;justify-self:center;padding:24px 0;">No device history.</p>';
+        return;
+      }
+
+      grid.innerHTML = '';
+      items.forEach((it)=>{
+        const dates = splitDates(it.date);
+        const statusText = String(it.status || 'Completed');
+        const badge = badgeClass(statusText);
+
+        const lessorText = (it.source === 'borrow' && (it.lessor === 'ComSci, KMITL')) ? 'CSKMITL' : it.lessor;
+
+        let durationText = '';
+        if(typeof it.days === 'number'){
+          durationText = `${durationLabel(it.source)} · ${it.days} days`;
+        }
+
+        let totalText = '';
+        if(it.source !== 'borrow'){
+          if(typeof it.total === 'number') totalText = `${it.total.toFixed(2)} Baht`;
+          else if(it.price) totalText = String(it.price);
+        }
+
+        const reviewBtn = (it.source === 'rent')
+          ? '<button class="btn btn-outline btn-review" type="button">Review</button>'
+          : '';
+
+        const card = document.createElement('article');
+        card.className = 'rentout-card' + (it.source === 'borrow' ? ' borrow-card' : '');
+        card.setAttribute('data-id', String(it.id ?? ''));
+        card.setAttribute('data-status', String(statusText).toLowerCase());
+
+        card.innerHTML = `
+          <div class="card-media-large" aria-hidden></div>
+          <div class="card-content">
+            <h3 class="device-name">${escapeHtml(it.name)}</h3>
+            ${durationText ? `<div class="meta small">${escapeHtml(durationText)}</div>` : ''}
+
+            <div class="meta small">Status · <span class="badge ${badge}">${escapeHtml(statusText)}</span></div>
+            ${dates.pick ? `<div class="meta small">Pick up · ${escapeHtml(dates.pick)}</div>` : ''}
+            ${dates.ret ? `<div class="meta small">Return · ${escapeHtml(dates.ret)}</div>` : ''}
+            ${totalText ? `<div class="meta small">Total Price · ${escapeHtml(totalText)}</div>` : ''}
+
+            <div class="card-divider"></div>
+
+            <div class="card-footer">
+              <div class="avatar" aria-hidden></div>
+              <div class="lessee">
+                <div class="lessee-name">${escapeHtml(lessorText)}</div>
+                ${reviewBtn}
+              </div>
+            </div>
+          </div>
+        `;
+
+        if(it.image){
+          const media = card.querySelector('.card-media-large');
+          if(media){
+            let imgUrl = String(it.image);
+            if (imgUrl.startsWith('[')) { try { const a = JSON.parse(imgUrl); imgUrl = a[0] || ''; } catch(e) {} }
+            if (imgUrl) {
+              media.style.backgroundImage = `url("${imgUrl.replace(/"/g, '\\"')}")`;
+              media.style.backgroundSize = 'cover';
+              media.style.backgroundPosition = 'center';
+            }
+          }
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    // Review modal logic (history + write views) — same behavior as rentout
+    (function(){
+      const reviewOverlay = document.getElementById('reviewOverlay');
+      const closeReview = document.getElementById('closeReview');
+      const reviewLesseeName = document.getElementById('reviewLesseeName');
+      const writeLesseeName = document.getElementById('writeLesseeName');
+      const reviewStars = document.getElementById('reviewStars');
+      const reviewText = document.getElementById('reviewText');
+      const submitReview = document.getElementById('submitReview');
+      const reviewHistoryView = document.getElementById('reviewHistoryView');
+      const reviewWriteView = document.getElementById('reviewWriteView');
+      const writeReviewBtn = document.getElementById('writeReviewBtn');
+      const backToHistory = document.getElementById('backToHistory');
+      const reviewList = document.getElementById('reviewList');
+      const reviewTitle = document.getElementById('reviewTitle');
+
+      if(!reviewOverlay) return;
+
+      function showHistoryView(){
+        reviewHistoryView && reviewHistoryView.classList.remove('hidden');
+        reviewWriteView && reviewWriteView.classList.add('hidden');
+        if(reviewTitle) reviewTitle.textContent = 'Review History';
+      }
+
+      function showWriteView(){
+        reviewHistoryView && reviewHistoryView.classList.add('hidden');
+        reviewWriteView && reviewWriteView.classList.remove('hidden');
+        if(reviewTitle) reviewTitle.textContent = 'Review lessor';
+        setTimeout(()=>{ reviewText && reviewText.focus(); }, 50);
+      }
+
+      function openReviewModal(name){
+        if(reviewLesseeName) reviewLesseeName.textContent = name;
+        if(writeLesseeName) writeLesseeName.textContent = name;
+        showHistoryView();
+        reviewOverlay.classList.add('open');
+        reviewOverlay.setAttribute('aria-hidden','false');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeReviewModal(){
+        reviewOverlay.classList.remove('open');
+        reviewOverlay.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+        if(reviewText) reviewText.value = '';
+        if(reviewStars){
+          Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+        }
+        showHistoryView();
+      }
+
+      // open on Review button click (use lessor name text)
+      document.addEventListener('click', (e)=>{
+        const btn = e.target.closest('.btn-review');
+        if(!btn) return;
+        const card = btn.closest('.rentout-card');
+        const name = card?.querySelector('.lessee-name')?.textContent?.trim() || 'Lessor Name';
+        openReviewModal(name);
+      });
+
+      closeReview && closeReview.addEventListener('click', closeReviewModal);
+      reviewOverlay.addEventListener('click', (e)=>{ if(e.target === reviewOverlay) closeReviewModal(); });
+
+      reviewStars && reviewStars.addEventListener('click', (e)=>{
+        const star = e.target.closest('.star');
+        if(!star) return;
+        const val = parseInt(star.dataset.value, 10);
+        Array.from(reviewStars.querySelectorAll('.star')).forEach(s=>{
+          s.classList.toggle('active', parseInt(s.dataset.value,10) <= val);
+        });
+      });
+
+      writeReviewBtn && writeReviewBtn.addEventListener('click', showWriteView);
+      backToHistory && backToHistory.addEventListener('click', showHistoryView);
+
+      // like/dislike toggle behavior for any review entry
+      function wireEntry(entry, key){
+        try{
+          const likeBtn = entry.querySelector('.thumb-like');
+          const dislikeBtn = entry.querySelector('.thumb-dislike');
+          const likeCountEl = entry.querySelector('.count-like');
+          const dislikeCountEl = entry.querySelector('.count-dislike');
+          const cur = localStorage.getItem(key);
+          if(cur === 'like') likeBtn && likeBtn.classList.add('active');
+          if(cur === 'dislike') dislikeBtn && dislikeBtn.classList.add('active');
+
+          likeBtn && likeBtn.addEventListener('click', ()=>{
+            const now = localStorage.getItem(key);
+            if(now === 'like'){
+              localStorage.removeItem(key);
+              likeBtn.classList.remove('active');
+              if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent || '0', 10) - 1));
+            }else{
+              localStorage.setItem(key, 'like');
+              likeBtn.classList.add('active');
+              if(likeCountEl) likeCountEl.textContent = String(parseInt(likeCountEl.textContent || '0', 10) + 1);
+              if(now === 'dislike'){
+                if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent || '0', 10) - 1));
+                dislikeBtn && dislikeBtn.classList.remove('active');
+              }
+            }
+          });
+
+          dislikeBtn && dislikeBtn.addEventListener('click', ()=>{
+            const now = localStorage.getItem(key);
+            if(now === 'dislike'){
+              localStorage.removeItem(key);
+              dislikeBtn.classList.remove('active');
+              if(dislikeCountEl) dislikeCountEl.textContent = String(Math.max(0, parseInt(dislikeCountEl.textContent || '0', 10) - 1));
+            }else{
+              localStorage.setItem(key, 'dislike');
+              dislikeBtn.classList.add('active');
+              if(dislikeCountEl) dislikeCountEl.textContent = String(parseInt(dislikeCountEl.textContent || '0', 10) + 1);
+              if(now === 'like'){
+                if(likeCountEl) likeCountEl.textContent = String(Math.max(0, parseInt(likeCountEl.textContent || '0', 10) - 1));
+                likeBtn && likeBtn.classList.remove('active');
+              }
+            }
+          });
+        }catch(err){ /* ignore */ }
+      }
+
+      // wire existing entries
+      document.querySelectorAll('#reviewList .review-entry').forEach((entry, i)=>{
+        const key = 'devicehistory_review_static_' + i;
+        wireEntry(entry, key);
+      });
+
+      submitReview && submitReview.addEventListener('click', ()=>{
+        const stars = reviewStars ? reviewStars.querySelectorAll('.star.active').length : 0;
+        const text = (reviewText?.value || '').trim();
+
+        const entry = document.createElement('div');
+        entry.className = 'review-entry';
+        entry.innerHTML = `
+          <div class="entry-avatar"></div>
+          <div class="entry-body">
+            <div class="entry-head"><strong>You</strong> <span class="entry-time">Just now</span></div>
+            <div class="entry-stars">${'★ '.repeat(Math.max(0,stars)).trim()}</div>
+            <div class="entry-text">${text ? escapeHtml(text) : ''}</div>
+            <div class="entry-actions"><button class="thumb-like">👍 <span class="count-like">0</span></button> <button class="thumb-dislike">👎 <span class="count-dislike">0</span></button></div>
+          </div>
+        `;
+        reviewList && reviewList.insertBefore(entry, reviewList.firstChild);
+
+        const key = 'devicehistory_review_' + Date.now();
+        wireEntry(entry, key);
+        closeReviewModal();
+      });
+    })();
+
+    // header search toggle
+    (function(){
+      const navSearchBtn = document.getElementById('navSearchBtn');
+      const headerSearch = document.getElementById('headerSearch');
+      const headerSearchInput = document.getElementById('headerSearchInput');
+      const headerSearchSubmit = document.getElementById('headerSearchSubmit');
+      if(!navSearchBtn || !headerSearch) return;
+      function showSearch(){ navSearchBtn.style.display='none'; headerSearch.classList.remove('hidden'); headerSearchInput && headerSearchInput.focus(); }
+      function hideSearch(){ headerSearch.classList.add('hidden'); navSearchBtn.style.display=''; }
+      navSearchBtn.addEventListener('click',(e)=>{ e.preventDefault(); showSearch(); });
+      headerSearchSubmit && headerSearchSubmit.addEventListener('click', (e)=>{ e.preventDefault(); const q = headerSearchInput && headerSearchInput.value; if(q) { window.location.href = '/features/devices/renttypedevice.html?type=search&q='+encodeURIComponent(q); } hideSearch(); });
+    })();
+  </script>
+
+  <!-- ── User-to-User Review Modal ──────────────────────────────────── -->
+  <div id="userReviewOverlay" class="review-overlay" aria-hidden="true">
+    <div class="review-modal" role="dialog" aria-modal="true" aria-labelledby="urTitle">
+      <button class="modal-close" id="urClose" aria-label="Close">&times;</button>
+      <h3 id="urTitle">⭐ รีวิว</h3>
+
+      <!-- Loading -->
+      <div id="urLoading" class="review-body">
+        <p style="text-align:center;padding:32px 0;color:#999;font-size:15px">กำลังตรวจสอบสิทธิ์...</p>
+      </div>
+
+      <!-- Already reviewed -->
+      <div id="urDone" class="review-body hidden">
+        <div style="text-align:center;padding:24px 0 16px">
+          <div style="font-size:52px;margin-bottom:10px">✅</div>
+          <div style="font-size:16px;font-weight:700;color:#22c55e;margin-bottom:8px">ส่งรีวิวเรียบร้อยแล้ว</div>
+          <div id="urDoneStars" style="font-size:26px;color:#FFC000;margin-bottom:6px"></div>
+          <div id="urDoneDesc" style="font-size:14px;color:#555;font-style:italic;max-width:260px;margin:0 auto;line-height:1.5"></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-outline urCloseBtn">ปิด</button></div>
+      </div>
+
+      <!-- Blocked -->
+      <div id="urBlocked" class="review-body hidden">
+        <div style="text-align:center;padding:24px 0 16px">
+          <div style="font-size:52px;margin-bottom:10px">🔒</div>
+          <div id="urBlockedMsg" style="font-size:14px;color:#555;line-height:1.7;max-width:280px;margin:0 auto"></div>
+          <div id="urBlockedStatus" style="margin-top:10px;font-size:13px;color:#7b8ab8;font-weight:600;padding:6px 14px;background:#f0f4ff;border-radius:20px;display:inline-block"></div>
+        </div>
+        <div class="modal-actions"><button class="btn btn-outline urCloseBtn">ปิด</button></div>
+      </div>
+
+      <!-- Write review -->
+      <div id="urWrite" class="review-body hidden">
+        <div class="review-lessee header" style="margin-bottom:16px">
+          <div class="review-avatar"></div>
+          <div>
+            <div class="review-lessee-name" id="urWriteName">-</div>
+            <div id="urWriteRole" style="font-size:12px;color:#888;margin-top:2px"></div>
+          </div>
+        </div>
+
+        <!-- ① คะแนนอุปกรณ์ (ดาวอย่างเดียว → บันทึกลง Device.Rating) -->
+        <div id="urDeviceStarsSection" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1.5px solid #eef0f5">
+          <div class="review-label" style="margin-bottom:8px">
+            ⭐ คะแนนอุปกรณ์
+            <span style="color:#bbb;font-weight:400;font-size:11px">(บังคับ)</span>
+          </div>
+          <div class="review-stars" id="urDeviceStars" aria-label="คะแนนอุปกรณ์">
+            <button class="star" data-value="1" type="button">★</button>
+            <button class="star" data-value="2" type="button">★</button>
+            <button class="star" data-value="3" type="button">★</button>
+            <button class="star" data-value="4" type="button">★</button>
+            <button class="star" data-value="5" type="button">★</button>
+          </div>
+        </div>
+
+        <!-- ② คะแนนบุคคล (ดาว + ข้อความ → บันทึกลง UserReview) -->
+        <div class="review-label" style="margin-bottom:8px">
+          👤 คะแนน <span id="urPersonLabel">บุคคล</span>
+          <span style="color:#bbb;font-weight:400;font-size:11px">(บังคับ)</span>
+        </div>
+        <div class="review-stars" id="urWriteStars" aria-label="เลือกคะแนน">
+          <button class="star" data-value="1" type="button">★</button>
+          <button class="star" data-value="2" type="button">★</button>
+          <button class="star" data-value="3" type="button">★</button>
+          <button class="star" data-value="4" type="button">★</button>
+          <button class="star" data-value="5" type="button">★</button>
+        </div>
+        <label class="review-label" for="urWriteText" style="margin-top:14px;display:block">เขียนรีวิว <span style="color:#bbb;font-weight:400">(ไม่บังคับ)</span></label>
+        <textarea id="urWriteText" rows="4" placeholder="แบ่งปันประสบการณ์ของคุณ..."></textarea>
+        <div class="modal-actions" style="margin-top:14px">
+          <button id="urSubmit" class="btn btn-cta" type="button">ส่งรีวิว</button>
+          <button class="btn btn-outline urCloseBtn" type="button">ยกเลิก</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ── User-to-User Review Modal ─────────────────────────────────────────────
+  (function () {
+    const overlay    = document.getElementById('userReviewOverlay');
+    if (!overlay) return;
+
+    const titleEl    = document.getElementById('urTitle');
+    const loading    = document.getElementById('urLoading');
+    const done       = document.getElementById('urDone');
+    const blocked    = document.getElementById('urBlocked');
+    const write      = document.getElementById('urWrite');
+    const writeName  = document.getElementById('urWriteName');
+    const writeRole  = document.getElementById('urWriteRole');
+    const starsEl    = document.getElementById('urWriteStars');
+    const textEl     = document.getElementById('urWriteText');
+    const submitBtn  = document.getElementById('urSubmit');
+    const doneStars  = document.getElementById('urDoneStars');
+    const doneDesc   = document.getElementById('urDoneDesc');
+    const blockedMsg = document.getElementById('urBlockedMsg');
+    const blockedStat= document.getElementById('urBlockedStatus');
+
+    let activeRequestNo = null;
+    let activeDeviceNo  = 0;
+    let activeRole      = '';
+    const deviceStarsEl     = document.getElementById('urDeviceStars');
+    const deviceStarsSection= document.getElementById('urDeviceStarsSection');
+    const personLabel       = document.getElementById('urPersonLabel');
+
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function showOnly(el){ [loading,done,blocked,write].forEach(v=>v&&v.classList.toggle('hidden',v!==el)); }
+
+    const STATUS_TH = {
+      'Request Pending'  : 'รอการยืนยัน',
+      'Booking Confirmed': 'ยืนยันแล้ว – รอรับอุปกรณ์',
+      'Rental Active'    : 'กำลังเช่า (รับอุปกรณ์แล้ว)',
+      'Rental Completed' : 'คืนอุปกรณ์แล้ว',
+    };
+
+    function openModal(requestNo, deviceNo, otherName, role) {
+      activeRequestNo = requestNo;
+      activeDeviceNo  = deviceNo || 0;
+      activeRole      = role || '';
+      if (writeName)   writeName.textContent   = otherName;
+      if (writeRole)   writeRole.textContent   = role === 'renter' ? '(เจ้าของอุปกรณ์)' : '(ผู้เช่าอุปกรณ์)';
+      if (titleEl)     titleEl.textContent     = role === 'renter' ? '⭐ รีวิวเจ้าของ' : '⭐ รีวิวผู้เช่า';
+      if (personLabel) personLabel.textContent = role === 'renter' ? 'เจ้าของอุปกรณ์' : 'ผู้เช่า';
+      // แสดง device stars เฉพาะผู้เช่า (renter) เท่านั้น
+      if (deviceStarsSection) deviceStarsSection.style.display = role === 'renter' ? '' : 'none';
+      if (starsEl)     Array.from(starsEl.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+      if (deviceStarsEl) Array.from(deviceStarsEl.querySelectorAll('.star')).forEach(s=>s.classList.remove('active'));
+      if (textEl)      textEl.value = '';
+      showOnly(loading);
+      overlay.classList.add('open');
+      overlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      checkEligibility(requestNo);
+    }
+
+    async function checkEligibility(requestNo) {
+      const token = localStorage.getItem('access_token') || '';
+      try {
+        const res = await fetch('/api/reviews/eligibility?requestNo=' + requestNo, {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        const result = await res.json();
+        const d = (result.data !== undefined) ? result.data : result;
+        if (d.alreadyReviewed) {
+          if (doneStars) doneStars.textContent = '';
+          if (doneDesc)  doneDesc.textContent  = 'คุณได้ส่งรีวิวสำหรับรายการนี้แล้ว';
+          showOnly(done);
+        } else if (d.canReview) {
+          showOnly(write);
+        } else {
+          if (blockedMsg)  blockedMsg.textContent  = d.reason || 'ยังไม่ถึงเงื่อนไขการรีวิว';
+          if (blockedStat) blockedStat.textContent = d.currentStatus
+            ? 'สถานะ: ' + (STATUS_TH[d.currentStatus] || d.currentStatus) : '';
+          showOnly(blocked);
+        }
+      } catch (e) {
+        if (blockedMsg)  blockedMsg.textContent  = 'โหลดข้อมูลไม่สำเร็จ — กรุณาลองใหม่';
+        if (blockedStat) blockedStat.textContent = esc(e.message || '');
+        showOnly(blocked);
+      }
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+      overlay.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      activeRequestNo = null;
+      activeDeviceNo  = 0;
+      activeRole      = '';
+    }
+
+    // Person star rating
+    starsEl && starsEl.addEventListener('click', e => {
+      const s = e.target.closest('.star');
+      if (!s) return;
+      const val = parseInt(s.dataset.value, 10);
+      Array.from(starsEl.querySelectorAll('.star')).forEach(st =>
+        st.classList.toggle('active', parseInt(st.dataset.value, 10) <= val)
+      );
+    });
+
+    // Device star rating
+    deviceStarsEl && deviceStarsEl.addEventListener('click', e => {
+      const s = e.target.closest('.star');
+      if (!s) return;
+      const val = parseInt(s.dataset.value, 10);
+      Array.from(deviceStarsEl.querySelectorAll('.star')).forEach(st =>
+        st.classList.toggle('active', parseInt(st.dataset.value, 10) <= val)
+      );
+    });
+
+    // Submit — บันทึกทั้งคะแนนอุปกรณ์และคะแนนบุคคล
+    submitBtn && submitBtn.addEventListener('click', async () => {
+      const isRenter    = activeRole === 'renter';
+      const deviceStars = deviceStarsEl ? deviceStarsEl.querySelectorAll('.star.active').length : 0;
+      const personStars = starsEl       ? starsEl.querySelectorAll('.star.active').length       : 0;
+      const text        = textEl        ? textEl.value.trim()                                   : '';
+      if (isRenter && !deviceStars) { alert('กรุณาเลือกคะแนนอุปกรณ์ (1–5 ดาว)'); return; }
+      if (!personStars) { alert('กรุณาเลือกคะแนนบุคคล (1–5 ดาว)'); return; }
+      if (!activeRequestNo) { alert('ไม่พบรายการเช่า'); return; }
+      const token = localStorage.getItem('access_token') || '';
+      if (!token) { alert('กรุณาเข้าสู่ระบบก่อน'); return; }
+
+      submitBtn.disabled    = true;
+      submitBtn.textContent = 'กำลังบันทึก...';
+      try {
+        // 1️⃣ บันทึกคะแนนอุปกรณ์ (เฉพาะผู้เช่า) → Review table → trigger อัพเดท Device.Rating อัตโนมัติ
+        if (isRenter && activeDeviceNo) {
+          const devRes = await fetch(`/api/devices/${activeDeviceNo}/reviews`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: deviceStars, description: '' })
+          });
+          if (!devRes.ok) {
+            const d = await devRes.json().catch(()=>({}));
+            throw new Error('บันทึกคะแนนอุปกรณ์ไม่สำเร็จ: ' + (d.message || 'HTTP ' + devRes.status));
+          }
+        }
+        // 2️⃣ บันทึกคะแนนบุคคล → UserReview table
+        const res = await fetch('/api/reviews', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ requestNo: activeRequestNo, rating: personStars, description: text })
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) throw new Error(result.message || 'บันทึกไม่สำเร็จ');
+        if (doneStars) doneStars.textContent = '★'.repeat(personStars) + '☆'.repeat(5 - personStars);
+        if (doneDesc)  doneDesc.textContent  = text || '(ไม่มีข้อความรีวิว)';
+        showOnly(done);
+      } catch (e) {
+        alert('ไม่สำเร็จ: ' + esc(e.message));
+      } finally {
+        submitBtn.disabled    = false;
+        submitBtn.textContent = 'ส่งรีวิว';
+      }
+    });
+
+    // Close handlers
+    document.getElementById('urClose') && document.getElementById('urClose').addEventListener('click', closeModal);
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay)            closeModal();
+      if (e.target.closest('.urCloseBtn')) closeModal();
+    });
+
+    window.openUserReviewModal = openModal;
+  })();
+  </script>
+
+  
+</body>
+</html>

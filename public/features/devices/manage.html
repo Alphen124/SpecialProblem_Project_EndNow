@@ -1,0 +1,2317 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Notelet — แชท</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="/js/auth.js"></script>
+  <script src="/js/chat-notifications.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy:   #043873;
+      --navy2:  #0a5ba8;
+      --green:  #22c55e;
+      --muted:  #6b7280;
+      --text:   #1e2d4a;
+      --border: rgba(4 56 115 / 0.12);
+      --bg:     rgba(255 255 255 / 0.97);
+    }
+    html, body {
+      height: 100%; font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+      overflow: hidden;
+    }
+
+    /* ─── wrapper ─────────────────────────────── */
+    .wrapper {
+      display: flex; flex-direction: column;
+      height: 100vh; max-width: 860px;
+      margin: 0 auto; padding: 16px; gap: 0;
+    }
+
+    /* ─── card ────────────────────────────────── */
+    .card {
+      display: flex; flex-direction: column;
+      flex: 1; min-height: 0;
+      background: var(--bg);
+      border-radius: 20px;
+      box-shadow: 0 24px 56px rgba(0 0 0 / 0.22);
+      overflow: hidden;
+    }
+
+    /* header */
+    .hdr {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .hdr-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--navy), var(--navy2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+    .hdr-info h2 { font-size: 15px; font-weight: 700; color: var(--text); }
+    .hdr-info p  { font-size: 12px; color: var(--muted); }
+    .conn-row { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #d1d5db; transition: background .3s; }
+    .dot.ok  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot.con { background: #f59e0b; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* feed */
+    .feed {
+      flex: 1; overflow-y: auto; padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 2px;
+      scroll-behavior: smooth;
+      scrollbar-width: thin; scrollbar-color: rgba(4 56 115 / 0.2) transparent;
+    }
+    .feed::-webkit-scrollbar { width: 5px; }
+    .feed::-webkit-scrollbar-thumb { background: rgba(4 56 115 / 0.2); border-radius: 10px; }
+
+    .date-sep {
+      display: flex; align-items: center; gap: 10px;
+      margin: 10px 0 6px; font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .06em;
+    }
+    .date-sep::before, .date-sep::after { content: ''; flex:1; height:1px; background: var(--border); }
+
+    .row {
+      display: flex; align-items: flex-end; gap: 8px;
+      max-width: 78%; animation: pop .2s ease-out;
+    }
+    @keyframes pop { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:none} }
+    .row.me { align-self: flex-end; flex-direction: row-reverse; }
+
+    .av {
+      width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--navy), var(--navy2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .grp { display: flex; flex-direction: column; gap: 2px; max-width: 100%; }
+    .meta { display: flex; align-items: baseline; gap: 6px; padding: 0 10px; font-size: 11px; }
+    .row.me .meta { justify-content: flex-end; }
+    .name { font-weight: 600; color: var(--text); }
+    .time { color: var(--muted); }
+
+    .bubble {
+      padding: 9px 14px; border-radius: 16px; word-break: break-word;
+      font-size: 14px; line-height: 1.55; color: var(--text);
+      background: rgba(255 255 255 / 0.7);
+      border: 1px solid rgba(255 255 255 / 0.6);
+      max-width: 420px;
+    }
+    .row.me .bubble {
+      background: linear-gradient(135deg, var(--navy), var(--navy2));
+      color: #fff; border-color: transparent;
+    }
+    .row.seq .av   { visibility: hidden; }
+    .row.seq .meta { display: none; }
+
+    .img-bubble {
+      max-width: 240px; border-radius: 12px; overflow: hidden; cursor: zoom-in;
+      border: 1px solid rgba(255 255 255 / 0.5);
+    }
+    .img-bubble img { width: 100%; display: block; }
+
+    /* typing */
+    .typing { padding: 4px 20px; height: 20px; font-size: 12px; color: var(--muted); font-style: italic; flex-shrink: 0; }
+
+    /* input area */
+    .input-area { padding: 10px 16px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .previews { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .chip {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(4 56 115 / 0.08); border-radius: 8px; padding: 4px 10px;
+      font-size: 12px; color: var(--navy); border: 1px solid rgba(4 56 115 / 0.15);
+    }
+    .chip img { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; }
+    .chip-rm { cursor: pointer; color: var(--muted); margin-left: 2px; font-size: 14px; }
+    .chip-rm:hover { color: #ef4444; }
+
+    .bar {
+      display: flex; align-items: flex-end; gap: 8px;
+      background: rgba(4 56 115 / 0.04);
+      border: 1.5px solid rgba(4 56 115 / 0.15);
+      border-radius: 14px; padding: 8px 12px;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .bar:focus-within { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(4 56 115 / 0.1); }
+
+    .img-btn {
+      width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      border: 1.5px solid var(--border); background: rgba(4 56 115 / 0.03);
+      cursor: pointer; font-size: 17px; color: var(--muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+    }
+    .img-btn:hover { background: rgba(4 56 115 / 0.1); color: var(--navy); }
+
+    textarea {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text);
+      resize: none; max-height: 100px; line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--muted); }
+
+    .send {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--navy), var(--navy2));
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 10px rgba(4 56 115 / 0.38);
+      transition: opacity .2s, transform .15s;
+    }
+    .send:hover { transform: scale(1.06); }
+    .send:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+    .send svg { width: 16px; height: 16px; fill: #fff; }
+    #imgInput { display: none; }
+
+    /* lightbox */
+    #lb {
+      position: fixed; inset: 0; z-index: 999;
+      background: rgba(0 0 0 / 0.88); display: none;
+      align-items: center; justify-content: center;
+    }
+    #lb.open { display: flex; }
+    #lb img { max-width: 90vw; max-height: 85vh; border-radius: 12px; }
+    #lb .close { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 28px; cursor: pointer; opacity: .8; }
+    #lb .close:hover { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<div class="wrapper">
+  <div class="card">
+
+    <!-- header -->
+    <div class="hdr">
+      <div class="hdr-icon">💬</div>
+      <div class="hdr-info">
+        <h2 id="roomTitle">แชท</h2>
+        <p  id="roomSub">กำลังเชื่อมต่อ...</p>
+      </div>
+      <div class="conn-row">
+        <div class="dot con" id="dot"></div>
+        <span id="connTxt">กำลังเชื่อมต่อ...</span>
+      </div>
+    </div>
+
+    <!-- feed -->
+    <div class="feed" id="feed"></div>
+
+    <!-- typing -->
+    <div class="typing" id="typing"></div>
+
+    <!-- input -->
+    <div class="input-area">
+      <div class="previews" id="previews"></div>
+      <div class="bar">
+        <button class="img-btn" title="แนบรูปภาพ" onclick="document.getElementById('imgInput').click()">🖼️</button>
+        <input type="file" id="imgInput" accept="image/*" multiple />
+        <textarea id="txt" rows="1" placeholder="พิมพ์ข้อความ..."></textarea>
+        <button class="send" id="sendBtn" disabled>
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- lightbox -->
+<div id="lb">
+  <span class="close" onclick="closeLb()">✕</span>
+  <img id="lbImg" src="" alt=""/>
+</div>
+
+<script>
+'use strict';
+
+/* ── auth ─────────────────────────────────── */
+function getAuth() {
+  const t = localStorage.getItem('access_token');
+  if (!t) return null;
+  try {
+    const p = JSON.parse(atob(t.split('.')[1]));
+    if (p.exp * 1000 < Date.now()) return null;
+    return { userId: p.user_id, name: p.name || p.email.split('@')[0], token: t };
+  } catch { return null; }
+}
+
+const user = getAuth();
+if (!user) {
+  const next = encodeURIComponent(location.href);
+  location.href = '/features/auth/login.html?next=' + next;
+}
+
+/* ── params ───────────────────────────────── */
+const QP   = Object.fromEntries(new URLSearchParams(location.search));
+const room = QP.room || 'general';
+document.getElementById('roomTitle').textContent = QP.title ? decodeURIComponent(QP.title) : 'แชทห้อง ' + room;
+
+/* ── state ────────────────────────────────── */
+const msgs   = [];
+const queue  = []; // pending image uploads
+let ws = null, reconnDelay = 1000, reconnTimer = null;
+let isTyping = false, typTimer = null;
+const peers  = new Map();
+
+/* ── helpers ──────────────────────────────── */
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const ini = n => { const p = (n||'?').trim().split(/\s+/); return (p.length>1?p[0][0]+p[1][0]:n[0]).toUpperCase(); };
+const fmt = d => d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+function dayLabel(d){
+  const t=new Date();
+  if(sameDay(d,t)) return 'วันนี้';
+  const y=new Date(t); y.setDate(t.getDate()-1);
+  if(sameDay(d,y)) return 'เมื่อวาน';
+  return d.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'});
+}
+
+/* ── WebSocket ────────────────────────────── */
+function connect() {
+  const proto = location.protocol==='https:'?'wss':'ws';
+  ws = new WebSocket(`${proto}://${location.host}/api/chat/ws?token=${encodeURIComponent(user.token)}&room=${encodeURIComponent(room)}`);
+  setConn('con','กำลังเชื่อมต่อ...');
+
+  ws.onopen = () => {
+    reconnDelay = 1000;
+    setConn('ok','เชื่อมต่อแล้ว');
+    send({ type:'history', roomId: room });
+  };
+  ws.onclose = () => {
+    setConn('','ขาดการเชื่อมต่อ');
+    reconnTimer = setTimeout(connect, reconnDelay);
+    reconnDelay = Math.min(reconnDelay*2, 30000);
+  };
+  ws.onerror = e => console.error('WS',e);
+  ws.onmessage = ({data}) => {
+    let m; try{ m=JSON.parse(data); }catch{ return; }
+    if      (m.type==='history')     loadHistory(m.history||[]);
+    else if (m.type==='chat')        { if(m.senderId!==user.userId) push(m); }
+    else if (m.type==='typing')      onTyping(m);
+    else if (m.type==='join')        sysLine(esc(m.senderName)+' เข้าร่วม');
+    else if (m.type==='leave')       sysLine(esc(m.senderName)+' ออกจากห้อง');
+  };
+}
+function send(obj){ if(ws&&ws.readyState===WebSocket.OPEN) ws.send(JSON.stringify(obj)); }
+function setConn(cls,txt){
+  const d=document.getElementById('dot');
+  d.className='dot '+(cls||'');
+  document.getElementById('connTxt').textContent=txt;
+}
+
+/* ── typing ───────────────────────────────── */
+function onTyping(m){
+  if(m.senderId===user.userId) return;
+  const nm=m.senderName||'ผู้ใช้';
+  if(m.isTyping){ clearTimeout(peers.get(nm)); peers.set(nm,setTimeout(()=>{peers.delete(nm);renderTyping();},4000)); }
+  else{ clearTimeout(peers.get(nm)); peers.delete(nm); }
+  renderTyping();
+}
+function renderTyping(){
+  const t=document.getElementById('typing');
+  if(!peers.size){t.textContent='';return;}
+  const ns=[...peers.keys()];
+  t.textContent=(ns.length===1?ns[0]+' กำลังพิมพ์':ns.length+' คนกำลังพิมพ์')+'...';
+}
+function startTyp(){ if(!isTyping){isTyping=true;send({type:'typing',roomId:room,isTyping:true});} clearTimeout(typTimer);typTimer=setTimeout(stopTyp,3000); }
+function stopTyp(){  clearTimeout(typTimer); if(isTyping){isTyping=false;send({type:'typing',roomId:room,isTyping:false});} }
+
+/* ── render ───────────────────────────────── */
+function loadHistory(history){
+  document.getElementById('feed').innerHTML='';
+  msgs.length=0;
+  history.forEach(m=>push(m,true));
+  scrollBot();
+}
+
+function push(m, bulk=false){
+  const feed=document.getElementById('feed');
+  const prev=msgs.length?msgs[msgs.length-1]:null;
+  const isSelf=m.senderId===user.userId;
+  const isSame=prev&&prev.senderId===m.senderId&&(new Date(m.timestamp)-new Date(prev.timestamp))<120000;
+
+  if(!prev||!sameDay(new Date(m.timestamp),new Date(prev.timestamp))){
+    const sep=document.createElement('div'); sep.className='date-sep';
+    sep.textContent=dayLabel(new Date(m.timestamp)); feed.appendChild(sep);
+  }
+
+  const row=document.createElement('div');
+  row.className=`row ${isSelf?'me':''} ${isSame?'seq':''}`.trim();
+
+  let body='';
+  if(m.imageUrl){
+    body=`<div class="img-bubble" onclick="openLb('${esc(m.imageUrl)}')"><img src="${esc(m.imageUrl)}" loading="lazy"/></div>`;
+  } else {
+    body=`<div class="bubble">${esc(m.content)}</div>`;
+  }
+
+  row.innerHTML=`
+    <div class="av">${ini(m.senderName)}</div>
+    <div class="grp">
+      ${!isSame?`<div class="meta"><span class="name">${esc(m.senderName)}</span><span class="time">${fmt(new Date(m.timestamp))}</span></div>`:''}
+      ${body}
+    </div>`;
+  feed.appendChild(row);
+  msgs.push(m);
+  if(!bulk) scrollBot();
+}
+
+function sysLine(txt){
+  const sep=document.createElement('div'); sep.className='date-sep'; sep.textContent=txt;
+  document.getElementById('feed').appendChild(sep); scrollBot();
+}
+function scrollBot(){ const f=document.getElementById('feed'); f.scrollTop=f.scrollHeight; }
+
+/* ── send message ─────────────────────────── */
+function doSend(){
+  if(queue.length){ queue.forEach(q=>sendImg(q)); queue.length=0; renderPreviews(); }
+
+  const ta=document.getElementById('txt');
+  const c=ta.value.trim();
+  if(!c) return;
+
+  push({senderId:user.userId,senderName:user.name,content:c,timestamp:new Date().toISOString()});
+  send({type:'chat',roomId:room,content:c});
+  ta.value=''; resize(ta);
+  document.getElementById('sendBtn').disabled=true;
+  stopTyp();
+}
+
+function sendImg(q){
+  const url=q.serverUrl||q.dataUrl;
+  if(!url) return;
+  push({senderId:user.userId,senderName:user.name,timestamp:new Date().toISOString(),imageUrl:url});
+  send({type:'chat',roomId:room,imageUrl:url});
+}
+
+/* ── image upload ─────────────────────────── */
+document.getElementById('imgInput').addEventListener('change', e=>{
+  Array.from(e.target.files).forEach(f=>{
+    const slot={dataUrl:null,serverUrl:null};
+    const fd=new FormData(); fd.append('images',f);
+    fetch('/api/upload/images',{method:'POST',headers:{'Authorization':'Bearer '+user.token},body:fd})
+      .then(r=>r.json()).then(j=>{ if(j.data?.urls?.[0]) slot.serverUrl=j.data.urls[0]; })
+      .catch(()=>{});
+    const reader=new FileReader();
+    reader.onload=ev=>{ slot.dataUrl=ev.target.result; queue.push(slot); renderPreviews(); document.getElementById('sendBtn').disabled=false; };
+    reader.readAsDataURL(f);
+  });
+  e.target.value='';
+});
+
+function renderPreviews(){
+  const box=document.getElementById('previews');
+  box.innerHTML='';
+  queue.forEach((q,i)=>{
+    const chip=document.createElement('div'); chip.className='chip';
+    chip.innerHTML=`<img src="${q.dataUrl}"/><span class="chip-rm" data-i="${i}">✕</span>`;
+    box.appendChild(chip);
+  });
+  box.querySelectorAll('.chip-rm').forEach(btn=>{
+    btn.onclick=()=>{ queue.splice(+btn.dataset.i,1); renderPreviews(); if(!queue.length&&!document.getElementById('txt').value.trim()) document.getElementById('sendBtn').disabled=true; };
+  });
+}
+
+/* ── textarea auto-resize ─────────────────── */
+function resize(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,100)+'px'; }
+
+/* ── lightbox ─────────────────────────────── */
+function openLb(src){ document.getElementById('lbImg').src=src; document.getElementById('lb').classList.add('open'); }
+function closeLb(){ document.getElementById('lb').classList.remove('open'); document.getElementById('lbImg').src=''; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLb(); });
+
+/* ── wire up ──────────────────────────────── */
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('roomSub').textContent='ห้อง '+room;
+
+  const ta=document.getElementById('txt');
+  ta.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();} });
+  ta.addEventListener('input',()=>{
+    resize(ta);
+    document.getElementById('sendBtn').disabled=!(ta.value.trim()||queue.length);
+    if(ta.value.trim()) startTyp(); else stopTyp();
+  });
+  document.getElementById('sendBtn').addEventListener('click',doSend);
+
+  connect();
+});
+</script>
+</body>
+</html>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --grad-start: #043873;
+      --grad-end:   #0a5ba8;
+      --primary:    #4F9CF9;
+      --green:      #22c55e;
+      --red:        #ef4444;
+      --amber:      #c97c2c;
+      --blue:       #3b82f6;
+      --surface:    rgba(255 255 255 / 0.96);
+      --surface-2:  rgba(255 255 255 / 0.6);
+      --border:     rgba(255 255 255 / 0.35);
+      --border-soft:rgba(4 56 115 / 0.12);
+      --text:       #1e2d4a;
+      --text-muted: #6b7280;
+      --shadow-lg:  0 32px 64px rgba(0 0 0 / 0.22);
+      --radius:     20px;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--grad-start) 0%, var(--grad-end) 100%);
+      min-height: 100vh;
+    }
+
+    /* ─── Topbar ────────────────────────────────────────────────── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(4 56 115 / 0.85);
+      backdrop-filter: blur(18px) saturate(160%);
+      -webkit-backdrop-filter: blur(18px) saturate(160%);
+      border-bottom: 1px solid rgba(255 255 255 / 0.12);
+      padding: 0 32px;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #4F9CF9, #c97c2c);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 4px 12px rgba(4 56 115 / 0.5);
+    }
+
+    .brand-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.3px;
+    }
+
+    .topbar-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .topbar-nav a {
+      color: rgba(255 255 255 / 0.75);
+      text-decoration: none;
+      font-size: 13.5px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 9px;
+      transition: background .15s, color .15s;
+    }
+
+    .topbar-nav a:hover, .topbar-nav a.active {
+      background: rgba(255 255 255 / 0.18);
+      color: #fff;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255 255 255 / 0.12);
+      border: 1px solid rgba(255 255 255 / 0.2);
+      border-radius: 999px;
+      padding: 6px 14px 6px 8px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .user-chip-av {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4F9CF9, #c97c2c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      border: 2px solid rgba(255 255 255 / 0.5);
+    }
+
+    .btn-logout {
+      background: rgba(239 68 68 / 0.15);
+      color: rgba(255 255 255 / 0.85);
+      border: 1px solid rgba(239 68 68 / 0.3);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .btn-logout:hover { background: rgba(239 68 68 / 0.3); }
+
+    /* ─── Page wrapper ──────────────────────────────────────────── */
+    .page {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+    }
+
+    /* ─── Page header ───────────────────────────────────────────── */
+    .page-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 26px;
+      flex-wrap: wrap;
+    }
+
+    .page-hero-text h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -.5px;
+    }
+
+    .page-hero-text p {
+      color: rgba(255 255 255 / 0.65);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .btn-add {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #c97c2c, #e8932f);
+      border: none;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 22px;
+      border-radius: 13px;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 4px 16px rgba(201 124 44 / 0.5);
+      text-decoration: none;
+    }
+
+    .btn-add:hover {
+      opacity: .9;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201 124 44 / 0.6);
+    }
+
+    /* ─── Glass card ────────────────────────────────────────────── */
+    .glass {
+      background: var(--surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* ─── Tabs ──────────────────────────────────────────────────── */
+    .tabs-bar {
+      display: flex;
+      gap: 4px;
+      background: rgba(4 56 115 / 0.5);
+      border: 1px solid rgba(255 255 255 / 0.18);
+      border-radius: 14px;
+      padding: 5px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(12px);
+      width: fit-content;
+    }
+
+    .tab-btn {
+      padding: 9px 20px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: rgba(255 255 255 / 0.65);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, color .18s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .tab-btn:hover { color: #fff; background: rgba(255 255 255 / 0.1); }
+
+    .tab-btn.active {
+      background: #fff;
+      color: var(--grad-start);
+    }
+
+    .tab-badge {
+      background: var(--red);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      padding: 0 5px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tab-badge.show { display: flex; }
+
+    .tab-pane { display: none; animation: fade-in .2s ease-out; }
+    .tab-pane.active { display: block; }
+
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Device grid ───────────────────────────────────────────── */
+    .device-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    /* ─── Device card ───────────────────────────────────────────── */
+    .dev-card {
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .dev-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 48px rgba(0 0 0 / 0.18);
+    }
+
+    .dev-card-img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #C4DEFD 0%, #d0e8ff 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dev-card-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .dev-status-pill {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      letter-spacing: .03em;
+      backdrop-filter: blur(8px);
+    }
+
+    .pill-available   { background: rgba(34 197 94 / 0.88);  color: #fff; }
+    .pill-delivered   { background: rgba(4 56 115 / 0.9);    color: #fff; }
+    .pill-returned    { background: rgba(201 124 44 / 0.9);  color: #fff; }
+    .pill-overdue     { background: rgba(239 68 68 / 0.9);   color: #fff; }
+    .pill-unavailable { background: rgba(107 114 128 / 0.9); color: #fff; }
+
+    .dev-card-body {
+      padding: 18px 20px 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dev-card-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e2d4a;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dev-card-type {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .dev-info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .dev-info-row:last-of-type { border-bottom: none; }
+
+    .dev-info-row strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .dev-price {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--grad-start);
+      margin: 10px 0 4px;
+    }
+
+    .dev-price small {
+      font-size: 12px;
+      font-weight: 400;
+      -webkit-text-fill-color: var(--text-muted);
+    }
+
+    /* ─── Card action footer ────────────────────────────────────── */
+    .dev-card-actions {
+      padding: 14px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Status selector row */
+    .status-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-select {
+      flex: 1;
+      padding: 8px 10px;
+      border: 1.5px solid var(--border-soft);
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      background: rgba(4 56 115 / 0.03);
+      outline: none;
+      transition: border-color .2s;
+      cursor: pointer;
+    }
+
+    .status-select:focus { border-color: var(--primary); }
+
+    .btn-update-status {
+      padding: 8px 14px;
+      background: linear-gradient(135deg, var(--grad-start), var(--grad-end));
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .2s, transform .15s;
+      box-shadow: 0 3px 10px rgba(4 56 115 / 0.35);
+    }
+
+    .btn-update-status:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-update-status:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+    /* Icon action buttons row */
+    .action-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 9px 4px 8px;
+      border-radius: 11px;
+      border: 1.5px solid;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      transition: background .15s, transform .15s, box-shadow .15s;
+      background: transparent;
+    }
+
+    .action-btn:hover { transform: translateY(-2px); }
+    .action-btn:active { transform: scale(.96); }
+    .action-btn:disabled { opacity: .38; cursor: not-allowed; transform: none !important; }
+
+    .action-btn .btn-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    /* Edit — blue */
+    .btn-edit-device {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .btn-edit-device:not(:disabled):hover {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(79 156 249 / 0.4);
+    }
+
+    /* Delete — red */
+    .btn-delete-device {
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .btn-delete-device:not(:disabled):hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(239 68 68 / 0.35);
+    }
+
+    /* History — amber */
+    .btn-history-device {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+    .btn-history-device:hover {
+      background: var(--amber);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(245 158 11 / 0.4);
+    }
+
+    /* Reviews — green */
+    .btn-review-device {
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .btn-review-device:hover {
+      background: var(--green);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(34 197 94 / 0.35);
+    }
+
+    /* ─── Empty state ───────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p  { font-size: 14px; }
+
+    /* ─── Request grid ──────────────────────────────────────────── */
+    .request-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 18px;
+    }
+
+    .req-card {
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .req-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .req-card.request-pending::before   { background: var(--amber); }
+    .req-card.booking-confirmed::before  { background: var(--green); }
+    .req-card.rental-active::before      { background: #3b82f6; }
+    .req-card.rental-completed::before   { background: var(--grad-start); }
+    .req-card.rejected::before  { background: var(--red); }
+    .req-card.cancelled::before { background: #9ca3af; }
+
+    .req-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .req-device-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .req-status-pill {
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 11px;
+    }
+
+    .req-status-pill.request-pending   { background: rgba(245 158 11 / 0.12); color: #92400e; }
+    .req-status-pill.booking-confirmed  { background: rgba(34 197 94 / 0.12);  color: #166534; }
+    .req-status-pill.rental-active      { background: rgba(59 130 246 / 0.12); color: #1e40af; }
+    .req-status-pill.rental-completed   { background: rgba(79 156 249 / 0.1);  color: #1e3a8a; }
+    .req-status-pill.rejected  { background: rgba(239 68 68 / 0.1);   color: #991b1b; }
+    .req-status-pill.cancelled { background: #f3f4f6; color: #6b7280; }
+
+    .req-person {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .req-av {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4F9CF9, var(--grad-start));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .req-person-name  { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .req-person-email { font-size: 11.5px; color: var(--text-muted); }
+
+    .req-dates {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .req-date-block {
+      background: rgba(4 56 115 / 0.04);
+      border: 1px solid var(--border-soft);
+      border-radius: 9px;
+      padding: 8px 12px;
+    }
+
+    .req-date-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .req-date-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .req-total {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--grad-start);
+    }
+
+    .req-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 8px 12px;
+      background: rgba(4 56 115 / 0.04);
+      border-radius: 8px;
+      border-left: 3px solid var(--border-soft);
+    }
+
+    .req-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .req-btn {
+      flex: 1;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .req-btn:hover  { opacity: .88; transform: translateY(-1px); }
+    .req-btn:active { transform: scale(.97); }
+    .req-btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+
+    .req-btn-confirm  { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(34 197 94 / 0.35); }
+    .req-btn-reject   { background: #fff; color: var(--red); border: 1.5px solid rgba(239 68 68 / 0.3); }
+    .req-btn-returned { background: var(--grad-start); color: #fff; box-shadow: 0 3px 10px rgba(4 56 115 / 0.4); }
+    .req-btn-cancel   { background: #f3f4f6; color: #6b7280; }
+
+    /* ─── Edit Modal ────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0 0 0 / 0.5);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-box {
+      background: var(--surface);
+      border-radius: 22px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 40px 80px rgba(0 0 0 / 0.28);
+      overflow: hidden;
+      transform: scale(.93) translateY(20px);
+      transition: transform .28s cubic-bezier(.34, 1.56, .64, 1);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-overlay.open .modal-box {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      padding: 22px 26px 18px;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-title-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--grad-start), #4F9CF9);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid var(--border-soft);
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: var(--text-muted);
+      transition: background .15s, color .15s;
+    }
+
+    .modal-close:hover { background: #fee2e2; color: var(--red); border-color: rgba(239 68 68 / 0.3); }
+
+    .modal-body {
+      padding: 22px 26px;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(102 126 234 / 0.3) transparent;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 7px;
+    }
+
+    .form-label .required { color: var(--red); margin-left: 2px; }
+
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid rgba(4 56 115 / 0.2);
+      border-radius: 11px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: rgba(4 56 115 / 0.02);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79 156 249 / 0.18);
+    }
+
+    .form-textarea { resize: vertical; min-height: 90px; line-height: 1.55; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    /* Image preview strip */
+    .img-preview-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .img-thumb {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1.5px solid var(--border-soft);
+    }
+
+    .img-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .img-thumb-label {
+      position: absolute;
+      inset: 0;
+      background: rgba(0 0 0 / 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: .04em;
+    }
+
+    .modal-footer {
+      padding: 16px 26px 20px;
+      border-top: 1px solid var(--border-soft);
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: opacity .2s, transform .15s;
+    }
+
+    .modal-btn:hover  { opacity: .9; transform: translateY(-1px); }
+    .modal-btn:active { transform: scale(.97); }
+    .modal-btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+    .modal-btn-save   { background: linear-gradient(135deg, var(--grad-start), var(--grad-end)); color: #fff; box-shadow: 0 4px 14px rgba(4 56 115 / 0.4); }
+    .modal-btn-cancel { background: rgba(107 114 128 / 0.1); color: var(--text-muted); }
+
+    /* ─── History Modal (reuse modal chrome) ────────────────────── */
+    .history-entry {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .history-entry:last-child { border-bottom: none; }
+
+    .hist-dot-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      padding-top: 4px;
+    }
+
+    .hist-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .hist-line {
+      flex: 1;
+      width: 2px;
+      background: var(--border-soft);
+      margin-top: 4px;
+    }
+
+    .hist-status { font-size: 14px; font-weight: 700; }
+    .hist-by     { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .hist-time   { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ─── Toast ─────────────────────────────────────────────────── */
+    .toast-wrap {
+      position: fixed;
+      top: 78px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #fff;
+      border-radius: 13px;
+      padding: 13px 18px 13px 14px;
+      box-shadow: 0 8px 32px rgba(0 0 0 / 0.16);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 260px;
+      max-width: 360px;
+      transform: translateX(120px);
+      opacity: 0;
+      transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), opacity .25s;
+      pointer-events: none;
+      border-left: 4px solid var(--grad-start);
+    }
+
+    .toast.show { transform: translateX(0); opacity: 1; }
+    .toast.success { border-left-color: var(--green); }
+    .toast.error   { border-left-color: var(--red); }
+    .toast.warning { border-left-color: var(--amber); }
+
+    .toast-icon { font-size: 20px; flex-shrink: 0; }
+
+    /* ─── Delete confirm modal ──────────────────────────────────── */
+    .confirm-body { padding: 28px 26px 24px; text-align: center; }
+    .confirm-icon { font-size: 44px; margin-bottom: 14px; }
+    .confirm-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .confirm-text  { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+    .confirm-footer {
+      padding: 14px 26px 22px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-danger {
+      flex: 1; padding: 13px; border-radius: 12px; font-size: 14px; font-weight: 700;
+      cursor: pointer; border: none;
+      background: var(--red); color: #fff;
+      box-shadow: 0 4px 14px rgba(239 68 68 / 0.35);
+      transition: opacity .2s, transform .15s;
+    }
+    .btn-danger:hover { opacity: .88; transform: translateY(-1px); }
+
+    /* ─── Notification bell ─────────────────────────────────────── */
+    .bell-wrap { position: relative; }
+
+    .bell-btn {
+      width: 38px;
+      height: 38px;
+      background: rgba(255 255 255 / 0.12);
+      border: 1px solid rgba(255 255 255 / 0.2);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background .15s;
+    }
+
+    .bell-btn:hover { background: rgba(255 255 255 / 0.22); }
+
+    .bell-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      padding: 0 3px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(80 50 120 / 0.5);
+    }
+
+    .bell-badge.show { display: flex; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(4 56 115 / 0.3); border-radius: 10px; }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .topbar { padding: 0 16px; }
+      .topbar-nav { display: none; }
+      .page { padding: 18px 14px 60px; }
+      .tabs-bar { width: 100%; }
+      .tab-btn { flex: 1; justify-content: center; padding: 9px 10px; font-size: 12px; }
+      .device-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .action-btns { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Topbar ─────────────────────────────────────────────────── -->
+<header class="topbar">
+  <a href="/" class="topbar-brand">
+    <div class="brand-icon">📋</div>
+    <span class="brand-name">Notelet</span>
+  </a>
+
+  <nav class="topbar-nav">
+    <a href="/features/devices/devices.html">🔍 ค้นหาอุปกรณ์</a>
+    <a href="/features/devices/manage.html" class="active">⚙️ จัดการอุปกรณ์</a>
+    <a href="/features/devices/devicehistory.html">📅 ประวัติการยืม</a>
+    <a href="/features/chat/rental-chat.html">💬 แชท</a>
+  </nav>
+
+  <div class="topbar-right">
+    <div class="bell-wrap">
+      <button class="bell-btn" id="bellBtn" title="การแจ้งเตือน">🔔
+        <span class="bell-badge" id="bellBadge"></span>
+      </button>
+    </div>
+    <div class="user-chip" id="userChip">
+      <div class="user-chip-av" id="userAv">?</div>
+      <span id="userName">กำลังโหลด...</span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+  </div>
+</header>
+
+<!-- ─── Page ───────────────────────────────────────────────────── -->
+<div class="page">
+
+  <!-- Hero -->
+  <div class="page-hero">
+    <div class="page-hero-text">
+      <h1>จัดการอุปกรณ์ของฉัน</h1>
+      <p>แก้ไข อัปเดตสถานะ และจัดการคำขอเช่าได้ที่นี่</p>
+    </div>
+    <a href="/features/devices/rentout.html#add" class="btn-add" id="btnAddDevice">
+      <span>+</span> เพิ่มอุปกรณ์ใหม่
+    </a>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="mydevices">
+      📱 อุปกรณ์ของฉัน
+    </button>
+    <button class="tab-btn" data-tab="incoming">
+      📨 คำขอที่เข้ามา
+      <span class="tab-badge" id="incomingBadge"></span>
+    </button>
+    <button class="tab-btn" data-tab="outgoing">
+      📬 คำขอที่ส่งไป
+    </button>
+  </div>
+
+  <!-- Tab: My Devices -->
+  <div class="tab-pane active" id="tab-mydevices">
+    <div class="device-grid" id="devicesGrid">
+      <div class="glass" style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:12px">⏳</div>
+        <p>กำลังโหลดอุปกรณ์...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Incoming Requests -->
+  <div class="tab-pane" id="tab-incoming">
+    <div class="request-grid" id="incomingGrid">
+      <div class="glass" style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:12px">⏳</div>
+        <p>กำลังโหลด...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Outgoing Requests -->
+  <div class="tab-pane" id="tab-outgoing">
+    <div class="request-grid" id="outgoingGrid">
+      <div class="glass" style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:12px">⏳</div>
+        <p>กำลังโหลด...</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.page -->
+
+<!-- Footer -->
+<footer style="background:rgba(4 56 115 / 0.55);backdrop-filter:blur(12px);border-top:1px solid rgba(255 255 255/.12);text-align:center;padding:18px;font-size:13px;color:rgba(255 255 255/.5);">
+  © 2026 Notelet. All rights reserved.
+</footer>
+
+<!-- ─── Toast container ────────────────────────────────────────── -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ─── Edit Device Modal ──────────────────────────────────────── -->
+<div class="modal-overlay" id="editOverlay" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <div class="modal-title-icon">✏️</div>
+        <span id="editModalTitle">แก้ไขอุปกรณ์</span>
+      </div>
+      <button class="modal-close" id="editModalClose" aria-label="ปิด">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="editForm" novalidate>
+        <input type="hidden" id="editId" />
+        <input type="hidden" id="editCurrentImages" />
+
+        <div class="form-group">
+          <label class="form-label" for="editName">ชื่ออุปกรณ์ <span class="required">*</span></label>
+          <input type="text" class="form-input" id="editName" placeholder="เช่น MacBook Pro 14" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="editType">ประเภท <span class="required">*</span></label>
+            <select class="form-select" id="editType" required>
+              <option value="">เลือกประเภท</option>
+              <option value="notebook">Notebook</option>
+              <option value="macbook">MacBook</option>
+              <option value="tablet">Tablet</option>
+              <option value="camera">กล้อง</option>
+              <option value="projector">โปรเจ็กเตอร์</option>
+              <option value="other">อื่นๆ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="editPrice">ราคา/วัน (บาท) <span class="required">*</span></label>
+            <input type="number" class="form-input" id="editPrice" min="0" step="0.01" placeholder="0.00" required />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="editDesc">คำอธิบาย</label>
+          <textarea class="form-textarea" id="editDesc" placeholder="รายละเอียดเพิ่มเติม..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="editImages">อัปโหลดรูปภาพใหม่ (ถ้าต้องการเปลี่ยน)</label>
+          <input type="file" class="form-input" id="editImages" accept="image/*" multiple style="padding:8px 14px;" />
+          <div class="img-preview-strip" id="editImgPreview"></div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-cancel" id="editCancelBtn">ยกเลิก</button>
+      <button class="modal-btn modal-btn-save" id="editSaveBtn">💾 บันทึกการเปลี่ยนแปลง</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Delete Confirm Modal ───────────────────────────────────── -->
+<div class="modal-overlay" id="deleteOverlay" role="dialog" aria-modal="true">
+  <div class="modal-box" style="max-width:420px">
+    <div class="confirm-body">
+      <div class="confirm-icon">🗑️</div>
+      <div class="confirm-title">ลบอุปกรณ์นี้?</div>
+      <p class="confirm-text">คุณกำลังจะลบ <strong id="deleteDeviceName"></strong><br>การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+    </div>
+    <div class="confirm-footer">
+      <button class="modal-btn modal-btn-cancel" id="deleteCancelBtn">ยกเลิก</button>
+      <button class="btn-danger" id="deleteConfirmBtn">🗑️ ลบเลย</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── History Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="historyOverlay" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">
+        <div class="modal-title-icon">📊</div>
+        <span>ประวัติสถานะ</span>
+      </div>
+      <button class="modal-close" id="historyModalClose">✕</button>
+    </div>
+    <div class="modal-body" id="historyContent">
+      <p style="color:var(--text-muted);text-align:center;padding:32px 0">กำลังโหลด...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ─── Auth ─────────────────────────────────────────────────────
+const token = localStorage.getItem('access_token');
+
+function getPayload() {
+  if (!token) return null;
+  try {
+    const p = JSON.parse(atob(token.split('.')[1]));
+    if (p.exp * 1000 < Date.now()) return null;
+    return p;
+  } catch { return null; }
+}
+
+const payload = getPayload();
+
+if (!payload) {
+  const next = encodeURIComponent(location.href);
+  location.href = `/features/auth/login.html?next=${next}`;
+}
+
+// ─── Boot ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  // Set username chip
+  const nameEl = document.getElementById('userName');
+  const avEl   = document.getElementById('userAv');
+  const storedUser = localStorage.getItem('user');
+  let displayName = payload?.email || 'User';
+  try {
+    const u = JSON.parse(storedUser);
+    displayName = u.name || u.email || displayName;
+  } catch {}
+  nameEl.textContent = displayName;
+  avEl.textContent   = displayName.charAt(0).toUpperCase();
+
+  await loadDevices();
+  loadIncomingBadge();
+
+  // Tab wiring
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const pane = document.getElementById('tab-' + btn.dataset.tab);
+      if (pane) pane.classList.add('active');
+      if (btn.dataset.tab === 'incoming') loadIncomingRequests();
+      if (btn.dataset.tab === 'outgoing') loadOutgoingRequests();
+    });
+  });
+});
+
+function doLogout() {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('user');
+  location.href = '/features/auth/login.html';
+}
+
+// ─── Toast ────────────────────────────────────────────────────
+function showToast(message, type = 'info') {
+  const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span>${escHtml(message)}</span>`;
+  wrap.appendChild(t);
+  requestAnimationFrame(() => { requestAnimationFrame(() => t.classList.add('show')); });
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 350);
+  }, 3600);
+}
+
+// ─── Auth header ──────────────────────────────────────────────
+const authHeaders = {
+  'Authorization': 'Bearer ' + token,
+  'Content-Type': 'application/json',
+};
+
+// ─── Load Devices ─────────────────────────────────────────────
+const deviceCache = {};
+const historyCache = {};
+
+async function loadDevices() {
+  const grid = document.getElementById('devicesGrid');
+  try {
+    const res = await fetch('/api/devices/my', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+
+    if (!res.ok) throw new Error(result.message || 'ไม่สามารถโหลดอุปกรณ์ได้');
+
+    const devices = result.data?.data || result.data || [];
+
+    if (!Array.isArray(devices) || devices.length === 0) {
+      grid.innerHTML = `
+        <div class="glass" style="grid-column:1/-1">
+          <div class="empty-state">
+            <div class="empty-icon">📦</div>
+            <h3>ยังไม่มีอุปกรณ์</h3>
+            <p>เพิ่มอุปกรณ์แรกของคุณเพื่อเริ่มปล่อยเช่า</p>
+          </div>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = '';
+    for (const d of devices) {
+      deviceCache[d.deviceNo] = d;
+      const wasDelivered = await checkWasDelivered(d.deviceNo);
+      grid.appendChild(buildDeviceCard(d, wasDelivered));
+    }
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `
+      <div class="glass" style="grid-column:1/-1">
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>โหลดไม่สำเร็จ</h3>
+          <p>${escHtml(err.message)}</p>
+        </div>
+      </div>`;
+  }
+}
+
+async function checkWasDelivered(deviceId) {
+  if (historyCache[deviceId] !== undefined) {
+    return historyCache[deviceId];
+  }
+  try {
+    const res = await fetch(`/api/devices/${deviceId}/history`, {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    const delivered = Array.isArray(result.data) && result.data.some(e => e.statusNo === 2);
+    historyCache[deviceId] = delivered;
+    return delivered;
+  } catch { return false; }
+}
+
+// ─── Build device card ────────────────────────────────────────
+function buildDeviceCard(d, wasDelivered) {
+    const statusInfo = {
+    1: { label: 'ว่าง', cls: 'pill-available' },
+    2: { label: 'ส่งมอบแล้ว', cls: 'pill-delivered' },
+    3: { label: 'คืนแล้ว', cls: 'pill-returned' },
+    4: { label: 'เกินกำหนด', cls: 'pill-overdue' },
+  };
+  const st = statusInfo[d.status] || { label: 'ไม่ทราบ', cls: 'pill-unavailable' };
+
+  const canModify = d.status != 2 && d.status != 4;
+
+  // First image URL
+  let imgHtml = '<span>📷</span>';
+  if (d.imageUrl) {
+    try {
+      const urls = JSON.parse(d.imageUrl);
+      if (Array.isArray(urls) && urls.length > 0) {
+        imgHtml = `<img src="${escHtml(urls[0])}" alt="${escHtml(d.name)}" loading="lazy" />`;
+      }
+    } catch {
+      if (d.imageUrl) imgHtml = `<img src="${escHtml(d.imageUrl)}" alt="${escHtml(d.name)}" loading="lazy" />`;
+    }
+  }
+
+  const card = document.createElement('article');
+  card.className = 'glass dev-card';
+  card.setAttribute('data-id', d.deviceNo);
+  card.innerHTML = `
+    <div class="dev-card-img">
+      ${imgHtml}
+      <span class="dev-status-pill ${st.cls}">${st.label}</span>
+    </div>
+    <div class="dev-card-body">
+      <div class="dev-price">${(+d.price || 0).toFixed(2)} <small>บาท/วัน</small></div>
+      <div class="dev-card-name" title="${escHtml(d.name)}">${escHtml(d.name)}</div>
+      <div class="dev-card-type">${escHtml(d.type || '—')}</div>
+
+      <div class="dev-info-row">
+        <span>⭐ คะแนน</span>
+        <strong>${d.rating ?? '—'}</strong>
+      </div>
+      <div class="dev-info-row">
+        <span>📅 เพิ่มเมื่อ</span>
+        <strong>${d.createdAt ? fmtDate(new Date(d.createdAt)) : 'เร็ว ๆ นี้'}</strong>
+      </div>
+    </div>
+
+    <div class="dev-card-actions">
+      <!-- Status update -->
+      <div class="status-row">
+        <select class="status-select" data-id="${d.deviceNo}" data-was-delivered="${wasDelivered}">
+          <option value="1" ${d.status == 1 ? 'selected' : ''}>ว่าง (Available)</option>
+          <option value="2" ${d.status == 2 ? 'selected' : ''}>ส่งมอบแล้ว (Delivered)</option>
+          <option value="3" ${d.status == 3 ? 'selected' : ''} ${!wasDelivered ? 'disabled title="ต้องส่งมอบก่อน"' : ''}>คืนแล้ว (Returned)</option>
+          <option value="4" ${d.status == 4 ? 'selected' : ''}>เกินกำหนด (Overdue)</option>
+        </select>
+        <button class="btn-update-status" data-id="${d.deviceNo}">อัปเดต</button>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-btns">
+        <button class="action-btn btn-edit-device" data-id="${d.deviceNo}" ${!canModify ? 'disabled title="ไม่สามารถแก้ไขในสถานะนี้"' : ''}>
+          <span class="btn-icon">✏️</span>
+          แก้ไข
+        </button>
+        <button class="action-btn btn-delete-device" data-id="${d.deviceNo}" ${!canModify ? 'disabled title="ไม่สามารถลบในสถานะนี้"' : ''}>
+          <span class="btn-icon">🗑️</span>
+          ลบ
+        </button>
+        <button class="action-btn btn-history-device" data-id="${d.deviceNo}">
+          <span class="btn-icon">📊</span>
+          ประวัติ
+        </button>
+        <button class="action-btn btn-review-device" data-id="${d.deviceNo}">
+          <span class="btn-icon">⭐</span>
+          รีวิว
+        </button>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+// ─── Status update ────────────────────────────────────────────
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.btn-update-status');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const sel = document.querySelector(`.status-select[data-id="${id}"]`);
+  if (!sel) return;
+
+  const statusNames = { 1: 'Available', 2: 'Delivered', 3: 'Returned', 4: 'Overdue' };
+  const newStatus   = statusNames[sel.value];
+  if (!newStatus) return;
+
+  btn.disabled = true;
+  btn.textContent = '⏳';
+
+  try {
+    const res = await fetch(`/api/devices/${id}/status`, {
+      method: 'PATCH',
+      headers: authHeaders,
+      body: JSON.stringify({ status: newStatus }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'ล้มเหลว');
+    showToast(`อัปเดตสถานะเป็น "${newStatus}" แล้ว`, 'success');
+    delete historyCache[id];
+    await loadDevices();
+  } catch (err) {
+    showToast('อัปเดตสถานะล้มเหลว: ' + err.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'อัปเดต';
+  }
+});
+
+// ─── Edit Device ──────────────────────────────────────────────
+const editOverlay   = document.getElementById('editOverlay');
+const editForm      = document.getElementById('editForm');
+const editSaveBtn   = document.getElementById('editSaveBtn');
+const editCancelBtn = document.getElementById('editCancelBtn');
+const editClose     = document.getElementById('editModalClose');
+
+function openEditModal(id) {
+  const d = deviceCache[id];
+  if (!d) return;
+
+  document.getElementById('editId').value = d.deviceNo;
+  document.getElementById('editName').value = d.name || '';
+  document.getElementById('editType').value = d.type || '';
+  document.getElementById('editPrice').value = d.price || '';
+  document.getElementById('editDesc').value  = d.description || '';
+  document.getElementById('editImages').value = '';
+
+  // Show current images
+  const preview = document.getElementById('editImgPreview');
+  preview.innerHTML = '';
+  document.getElementById('editCurrentImages').value = d.imageUrl || '';
+
+  if (d.imageUrl) {
+    try {
+      const urls = JSON.parse(d.imageUrl);
+      if (Array.isArray(urls)) {
+        urls.forEach(url => {
+          const div = document.createElement('div');
+          div.className = 'img-thumb';
+          div.innerHTML = `<img src="${escHtml(url)}" alt="current"><div class="img-thumb-label">ปัจจุบัน</div>`;
+          preview.appendChild(div);
+        });
+      }
+    } catch {
+      if (d.imageUrl) {
+        preview.innerHTML = `<div class="img-thumb"><img src="${escHtml(d.imageUrl)}" alt="current"><div class="img-thumb-label">ปัจจุบัน</div></div>`;
+      }
+    }
+  }
+
+  editOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('editName').focus(), 50);
+}
+
+function closeEditModal() {
+  editOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  editForm.reset();
+  document.getElementById('editImgPreview').innerHTML = '';
+}
+
+editClose.addEventListener('click', closeEditModal);
+editCancelBtn.addEventListener('click', closeEditModal);
+editOverlay.addEventListener('click', e => { if (e.target === editOverlay) closeEditModal(); });
+
+editSaveBtn.addEventListener('click', async () => {
+  const id    = document.getElementById('editId').value;
+  const name  = document.getElementById('editName').value.trim();
+  const type  = document.getElementById('editType').value;
+  const price = parseFloat(document.getElementById('editPrice').value);
+  const desc  = document.getElementById('editDesc').value.trim();
+  const files = document.getElementById('editImages').files;
+  const currentImages = document.getElementById('editCurrentImages').value;
+
+  if (!name || !type || !price) {
+    showToast('กรุณากรอกข้อมูลที่จำเป็น: ชื่อ, ประเภท, ราคา', 'warning');
+    return;
+  }
+
+  editSaveBtn.disabled = true;
+  editSaveBtn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    let imageUrls = [];
+
+    if (files && files.length > 0) {
+      editSaveBtn.textContent = `⏳ กำลังอัปโหลดรูป (${files.length})...`;
+      const form = new FormData();
+      Array.from(files).forEach(f => form.append('images', f));
+      const upRes = await fetch('/api/upload/device-images', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: form,
+      });
+      const upData = await upRes.json();
+      if (!upRes.ok) throw new Error(upData.message || 'อัปโหลดรูปล้มเหลว');
+      imageUrls = upData.urls || upData.data || [];
+    } else {
+      try {
+        imageUrls = currentImages ? JSON.parse(currentImages) : [];
+        if (!Array.isArray(imageUrls)) imageUrls = currentImages ? [currentImages] : [];
+      } catch {
+        imageUrls = currentImages ? [currentImages] : [];
+      }
+    }
+
+    editSaveBtn.textContent = '⏳ กำลังบันทึก...';
+
+    const res = await fetch(`/api/devices/${id}`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({
+        name, type, price, description: desc,
+        imageUrl: imageUrls.length > 0 ? JSON.stringify(imageUrls) : '',
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'บันทึกล้มเหลว');
+
+    showToast('แก้ไขอุปกรณ์สำเร็จแล้ว!', 'success');
+    closeEditModal();
+    await loadDevices();
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    editSaveBtn.disabled = false;
+    editSaveBtn.textContent = '💾 บันทึกการเปลี่ยนแปลง';
+  }
+});
+
+// Open edit on card click
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-edit-device');
+  if (!btn || btn.disabled) return;
+  openEditModal(btn.dataset.id);
+});
+
+// ─── Delete Device ────────────────────────────────────────────
+const deleteOverlay    = document.getElementById('deleteOverlay');
+const deleteCancelBtn  = document.getElementById('deleteCancelBtn');
+const deleteConfirmBtn = document.getElementById('deleteConfirmBtn');
+let pendingDeleteId = null;
+
+function openDeleteModal(id) {
+  const d = deviceCache[id];
+  pendingDeleteId = id;
+  document.getElementById('deleteDeviceName').textContent = d ? `"${d.name}"` : `#${id}`;
+  deleteOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal() {
+  deleteOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+  pendingDeleteId = null;
+}
+
+deleteCancelBtn.addEventListener('click', closeDeleteModal);
+deleteOverlay.addEventListener('click', e => { if (e.target === deleteOverlay) closeDeleteModal(); });
+
+deleteConfirmBtn.addEventListener('click', async () => {
+  if (!pendingDeleteId) return;
+  deleteConfirmBtn.disabled = true;
+  deleteConfirmBtn.textContent = '⏳ กำลังลบ...';
+  try {
+    const res = await fetch(`/api/devices/${pendingDeleteId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'ลบล้มเหลว');
+    showToast('ลบอุปกรณ์สำเร็จแล้ว', 'success');
+    closeDeleteModal();
+    await loadDevices();
+  } catch (err) {
+    showToast('ลบล้มเหลว: ' + err.message, 'error');
+    deleteConfirmBtn.disabled = false;
+    deleteConfirmBtn.textContent = '🗑️ ลบเลย';
+  }
+});
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-delete-device');
+  if (!btn || btn.disabled) return;
+  openDeleteModal(btn.dataset.id);
+});
+
+// ─── History Modal ────────────────────────────────────────────
+const historyOverlay = document.getElementById('historyOverlay');
+const historyClose   = document.getElementById('historyModalClose');
+
+historyClose.addEventListener('click', () => {
+  historyOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+});
+historyOverlay.addEventListener('click', e => { if (e.target === historyOverlay) { historyOverlay.classList.remove('open'); document.body.style.overflow = ''; } });
+
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('.btn-history-device');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const content = document.getElementById('historyContent');
+  content.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:32px 0">กำลังโหลด...</p>';
+  historyOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  try {
+    const res = await fetch(`/api/devices/${id}/history`, {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    const history = Array.isArray(result.data) ? result.data : [];
+
+    if (history.length === 0) {
+      content.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>ยังไม่มีประวัติสถานะ</p></div>';
+      return;
+    }
+
+    const colorsMap = { Available: '#22c55e', Delivered: '#043873', Returned: '#c97c2c', Overdue: '#ef4444' };
+    content.innerHTML = history.map((entry, i) => {
+      const color = colorsMap[entry.statusName] || '#9ca3af';
+      const isLast = i === history.length - 1;
+      const dt = new Date(entry.changedAt);
+      return `
+        <div class="history-entry">
+          <div class="hist-dot-col">
+            <div class="hist-dot" style="background:${color}"></div>
+            ${!isLast ? '<div class="hist-line"></div>' : ''}
+          </div>
+          <div style="flex:1">
+            <div class="hist-status" style="color:${color}">${escHtml(entry.statusName)}</div>
+            <div class="hist-by">โดย ${escHtml(entry.changedByEmail || '—')}</div>
+            <div class="hist-time">${dt.toLocaleString('th-TH', { dateStyle:'medium', timeStyle:'short' })}</div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch (err) {
+    content.innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>${escHtml(err.message)}</p></div>`;
+  }
+});
+
+// Reviews button (link to existing review modal or page)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.btn-review-device');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  window.location.href = `/features/devices/rentout.html?review=${id}`;
+});
+
+// ─── Incoming Requests Badge ──────────────────────────────────
+async function loadIncomingBadge() {
+  try {
+    const res = await fetch('/api/rental-requests/incoming', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    const requests = Array.isArray(result.data) ? result.data : [];
+    const pending  = requests.filter(r => r.status === 'pending').length;
+    const badge    = document.getElementById('incomingBadge');
+    const bellBadge = document.getElementById('bellBadge');
+    if (pending > 0) {
+      badge.textContent = pending;
+      badge.classList.add('show');
+      bellBadge.textContent = pending;
+      bellBadge.classList.add('show');
+    } else {
+      badge.classList.remove('show');
+      bellBadge.classList.remove('show');
+    }
+  } catch {}
+}
+
+// ─── Incoming Requests ────────────────────────────────────────
+async function loadIncomingRequests() {
+  const grid = document.getElementById('incomingGrid');
+  grid.innerHTML = '<div class="glass" style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--text-muted);"><div style="font-size:40px;margin-bottom:12px">⏳</div><p>กำลังโหลด...</p></div>';
+  try {
+    const res = await fetch('/api/rental-requests/incoming', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    const requests = Array.isArray(result.data) ? result.data : [];
+
+    const pending = requests.filter(r => r.status === 'pending').length;
+    const badge = document.getElementById('incomingBadge');
+    if (pending > 0) { badge.textContent = pending; badge.classList.add('show'); }
+    else badge.classList.remove('show');
+
+    if (requests.length === 0) {
+      grid.innerHTML = `
+        <div class="glass" style="grid-column:1/-1">
+          <div class="empty-state"><div class="empty-icon">📭</div><h3>ยังไม่มีคำขอ</h3><p>เมื่อมีผู้สนใจเช่าอุปกรณ์ จะแสดงที่นี่</p></div>
+        </div>`;
+      return;
+    }
+    grid.innerHTML = requests.map(r => renderReqCard(r, 'incoming')).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="glass" style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">⚠️</div><h3>โหลดไม่ได้</h3><p>${escHtml(err.message)}</p></div></div>`;
+  }
+}
+
+// ─── Outgoing Requests ────────────────────────────────────────
+async function loadOutgoingRequests() {
+  const grid = document.getElementById('outgoingGrid');
+  grid.innerHTML = '<div class="glass" style="grid-column:1/-1;padding:60px 24px;text-align:center;color:var(--text-muted);"><div style="font-size:40px;margin-bottom:12px">⏳</div><p>กำลังโหลด...</p></div>';
+  try {
+    const res = await fetch('/api/rental-requests/outgoing', {
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    const result = await res.json();
+    const requests = Array.isArray(result.data) ? result.data : [];
+    if (requests.length === 0) {
+      grid.innerHTML = `
+        <div class="glass" style="grid-column:1/-1">
+          <div class="empty-state"><div class="empty-icon">📬</div><h3>ยังไม่มีคำขอที่ส่งไป</h3><p>คำขอเช่าที่คุณส่งจะแสดงที่นี่</p></div>
+        </div>`;
+      return;
+    }
+    grid.innerHTML = requests.map(r => renderReqCard(r, 'outgoing')).join('');
+  } catch (err) {
+    grid.innerHTML = `<div class="glass" style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">⚠️</div><h3>โหลดไม่ได้</h3><p>${escHtml(err.message)}</p></div></div>`;
+  }
+}
+
+function renderReqCard(r, mode) {
+  const person = mode === 'incoming'
+    ? (r.renterName || r.renterEmail || 'ผู้เช่า')
+    : (r.ownerName  || r.ownerEmail  || 'เจ้าของ');
+  const initial  = person.charAt(0).toUpperCase();
+  const status   = r.status || 'Request Pending';
+  const statusCls = { 'Request Pending':'request-pending', 'Booking Confirmed':'booking-confirmed', 'Rental Active':'rental-active', 'Rental Completed':'rental-completed', rejected:'rejected', cancelled:'cancelled' };
+  const statusTh  = { 'Request Pending':'รอการยืนยัน', 'Booking Confirmed':'ยืนยันแล้ว', 'Rental Active':'กำลังเช่า', 'Rental Completed':'เสร็จสิ้น', rejected:'ปฏิเสธแล้ว', cancelled:'ยกเลิกแล้ว' };
+  const cls = statusCls[status] || 'request-pending';
+  const days = r.startDate && r.endDate
+    ? Math.ceil((new Date(r.endDate) - new Date(r.startDate)) / 86400000) + 1
+    : '—';
+
+  const fmtD = d => d ? new Date(d).toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' }) : '—';
+
+  let actions = '';
+  if (mode === 'incoming') {
+    if (status === 'Request Pending') {
+      actions = `
+        <button class="req-btn req-btn-confirm" onclick="handleRequest(${r.requestNo},'confirm',this)">✅ ยืนยัน</button>
+        <button class="req-btn req-btn-reject"  onclick="handleRequest(${r.requestNo},'reject',this)">❌ ปฏิเสธ</button>`;
+    } else if (status === 'Booking Confirmed' || status === 'Rental Active') {
+      actions = `<button class="req-btn req-btn-returned" onclick="handleRequest(${r.requestNo},'returned',this)">📦 รับคืนแล้ว</button>`;
+    }
+  } else if (mode === 'outgoing' && status === 'Request Pending') {
+    actions = `<button class="req-btn req-btn-cancel" onclick="handleRequest(${r.requestNo},'cancel',this)">✕ ยกเลิก</button>`;
+  }
+
+  return `
+    <div class="glass req-card ${cls}">
+      <div class="req-header">
+        <div class="req-device-name">${escHtml(r.deviceName || `อุปกรณ์ #${r.deviceNo}`)}</div>
+        <span class="req-status-pill ${cls}">${statusTh[status] || status}</span>
+      </div>
+      <div class="req-person">
+        <div class="req-av">${escHtml(initial)}</div>
+        <div>
+          <div class="req-person-name">${escHtml(person)}</div>
+          <div class="req-person-email">${escHtml(mode === 'incoming' ? (r.renterEmail || '') : (r.ownerEmail || ''))}</div>
+        </div>
+      </div>
+      <div class="req-dates">
+        <div class="req-date-block">
+          <div class="req-date-label">เริ่มต้น</div>
+          <div class="req-date-value">${fmtD(r.startDate)}</div>
+        </div>
+        <div class="req-date-block">
+          <div class="req-date-label">สิ้นสุด</div>
+          <div class="req-date-value">${fmtD(r.endDate)}</div>
+        </div>
+        <div class="req-date-block">
+          <div class="req-date-label">จำนวนวัน</div>
+          <div class="req-date-value">${days} วัน</div>
+        </div>
+      </div>
+      <div class="req-total">${r.totalPrice ? (+r.totalPrice).toFixed(2) + ' บาท' : '—'}</div>
+      ${r.note ? `<div class="req-note">📝 ${escHtml(r.note)}</div>` : ''}
+      ${actions ? `<div class="req-actions">${actions}</div>` : ''}
+    </div>`;
+}
+
+async function handleRequest(requestNo, action, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  const actionMap = { confirm: 'confirm', reject: 'reject', returned: 'returned', cancel: 'cancel' };
+  try {
+    const res = await fetch(`/api/rental-requests/${requestNo}/${actionMap[action]}`, {
+      method: 'PATCH',
+      headers: authHeaders,
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.message || 'ล้มเหลว');
+    const msgMap = { confirm:'ยืนยันคำขอแล้ว', reject:'ปฏิเสธคำขอแล้ว', returned:'บันทึกการคืนแล้ว', cancel:'ยกเลิกคำขอแล้ว' };
+    showToast(msgMap[action] || 'ดำเนินการสำเร็จ', 'success');
+    // Reload appropriate tab
+    const active = document.querySelector('.tab-btn.active')?.dataset.tab;
+    if (active === 'incoming') await loadIncomingRequests();
+    if (active === 'outgoing') await loadOutgoingRequests();
+    loadIncomingBadge();
+  } catch (err) {
+    showToast('เกิดข้อผิดพลาด: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '?'; }
+  }
+}
+
+// ─── Utils ────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d || isNaN(d)) return '—';
+  return d.toLocaleDateString('th-TH', { day:'numeric', month:'short', year:'numeric' });
+}
+</script>
+</body>
+</html>
