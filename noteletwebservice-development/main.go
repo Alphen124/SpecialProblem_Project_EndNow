@@ -9,6 +9,7 @@ import (
 	database "noteletwebservice-development/config/database"
 	"noteletwebservice-development/controllers"
 	"noteletwebservice-development/routers"
+	firebasesvc "noteletwebservice-development/services/firebase"
 	"noteletwebservice-development/services/oauth"
 	"noteletwebservice-development/utils"
 
@@ -52,6 +53,13 @@ func main() {
 	// ============================================================
 	oauth.InitGoogleOAuth(clientID, clientSecret, redirectURL)
 	fmt.Println("✓ Google OAuth initialized")
+
+	// Initialise Firebase Admin SDK (for Google Sign-In via Firebase)
+	if err := firebasesvc.Init(); err != nil {
+		log.Printf("Warning: Firebase Admin SDK not initialised (%v) — /api/auth/firebase will not work until serviceAccountKey.json is added", err)
+	} else {
+		fmt.Println("✓ Firebase Admin SDK initialized")
+	}
 
 	// Run Review table migration at startup
 	migrationSQL := `CREATE TABLE IF NOT EXISTS Review (
@@ -425,6 +433,7 @@ func main() {
 	// สร้าง controllers
 	authController := controllers.NewAuthController(db)
 	oauthController := controllers.NewOAuthController(db)
+	firebaseController := controllers.NewFirebaseAuthController(db)
 	deviceController := controllers.NewDeviceController(db)
 	uploadController := controllers.NewUploadController("./uploads")
 	reviewController := controllers.NewReviewController(db)
@@ -435,7 +444,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Setup API routes first
-	apiMux := routers.SetupRoutes(authController, oauthController, deviceController, uploadController, reviewController, rentalController, chatController)
+	apiMux := routers.SetupRoutes(authController, oauthController, firebaseController, deviceController, uploadController, reviewController, rentalController, chatController)
 
 	// Mount API routes
 	mux.Handle("/api/", apiMux)

@@ -9,7 +9,7 @@ import (
 )
 
 // SetupRoutes กำหนด routes สำหรับ API
-func SetupRoutes(authController *controllers.AuthController, oauthController *controllers.OAuthController, deviceController *controllers.DeviceController, uploadController *controllers.UploadController, reviewController *controllers.ReviewController, rentalController *controllers.RentalController, chatController *controllers.ChatController) *http.ServeMux {
+func SetupRoutes(authController *controllers.AuthController, oauthController *controllers.OAuthController, firebaseController *controllers.FirebaseAuthController, deviceController *controllers.DeviceController, uploadController *controllers.UploadController, reviewController *controllers.ReviewController, rentalController *controllers.RentalController, chatController *controllers.ChatController) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// Public routes (ไม่ต้องการ authentication)
@@ -23,6 +23,9 @@ func SetupRoutes(authController *controllers.AuthController, oauthController *co
 	// OAuth routes
 	mux.HandleFunc("/api/auth/google", oauthController.GoogleLogin)
 	mux.HandleFunc("/api/auth/google/callback", oauthController.GoogleCallback)
+
+	// Firebase Authentication route (POST id_token → returns app JWT)
+	mux.HandleFunc("/api/auth/firebase", firebaseController.FirebaseLogin)
 
 	// Public device routes (can browse without login)
 	mux.HandleFunc("/api/devices/browse", deviceController.GetAllDevices)

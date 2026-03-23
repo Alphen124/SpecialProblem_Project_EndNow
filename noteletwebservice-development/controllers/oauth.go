@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"noteletwebservice-development/models"
@@ -47,16 +49,21 @@ func (oc *OAuthController) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 
 // GoogleCallback รับ callback จาก Google OAuth
 func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request) {
+	// helper: redirect กลับ login page พร้อม error message
+	redirectError := func(msg string) {
+		http.Redirect(w, r, "/features/auth/login.html?error="+url.QueryEscape(msg), http.StatusTemporaryRedirect)
+	}
+
 	// ตรวจสอบ state token
 	stateCookie, err := r.Cookie("oauth_state")
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "State cookie not found", "")
+		redirectError("Session expired, please try again")
 		return
 	}
 
 	stateQuery := r.URL.Query().Get("state")
 	if stateQuery != stateCookie.Value {
-		respondWithError(w, http.StatusBadRequest, "Invalid state token", "")
+		redirectError("Invalid session state, please try again")
 		return
 	}
 
@@ -68,41 +75,41 @@ func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request
 	})
 
 	// ตรวจสอบ error จาก Google
-	if errorMsg := r.URL.Query().Get("error"); errorMsg != "" {
-		respondWithError(w, http.StatusBadRequest, "OAuth error: "+errorMsg, "")
+	if r.URL.Query().Get("error") != "" {
+		redirectError("Google sign-in was cancelled or failed")
 		return
 	}
 
 	// ดึง authorization code
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		respondWithError(w, http.StatusBadRequest, "Authorization code not found", "")
+		redirectError("Authorization code not found")
 		return
 	}
 
 	// แลกเปลี่ยน code เป็น token
 	token, err := oauth.ExchangeCodeForToken(code)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to exchange token", err.Error())
+		redirectError("Failed to sign in with Google, please try again")
 		return
 	}
 
 	// ดึงข้อมูลผู้ใช้จาก Google
 	googleUser, err := oauth.GetGoogleUserInfo(token.AccessToken)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to get user info", err.Error())
+		redirectError("Failed to retrieve Google account information")
 		return
 	}
 
 	// ตรวจสอบว่าเป็นอีเมล @kmitl.ac.th
 	if !utils.IsKMITLEmail(googleUser.Email) {
-		respondWithError(w, http.StatusForbidden, "Only @kmitl.ac.th email addresses are allowed", "")
+		redirectError("Only @kmitl.ac.th email addresses are allowed")
 		return
 	}
 
 	// ตรวจสอบว่า email ได้รับการยืนยันหรือไม่
 	if !googleUser.VerifiedEmail {
-		respondWithError(w, http.StatusBadRequest, "Email not verified", "")
+		redirectError("Your Google account email is not verified")
 		return
 	}
 
@@ -121,17 +128,17 @@ func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request
 		// ไม่มี user ในระบบ -> สร้างบัญชีใหม่อัตโนมัติ
 		user, err = oc.createUserFromGoogle(googleUser)
 		if err != nil {
-			respondWithError(w, http.StatusInternalServerError, "Failed to create user account", err.Error())
+			redirectError("Failed to create user account")
 			return
 		}
 	} else if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Database error", err.Error())
+		redirectError("Database error, please try again")
 		return
 	}
 
 	// ตรวจสอบว่า account active หรือไม่
 	if !user.IsActive {
-		respondWithError(w, http.StatusForbidden, "Account is inactive", "")
+		redirectError("Your account is inactive, please contact support")
 		return
 	}
 
@@ -153,11 +160,11 @@ func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request
 	// สร้าง JWT tokens (ไม่ต้องส่ง role)
 	accessToken, refreshToken, err := jwt.GenerateTokenPair(user.UserId, user.Email, false)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to generate tokens", err.Error())
+		redirectError("Failed to generate session tokens")
 		return
 	}
 
-	// ส่ง response พร้อมข้อมูลทั้ง Owner และ Renter
+	// สร้าง response data
 	responseData := responses.DualRoleUserResponse{
 		UserId:   user.UserId,
 		Email:    user.Email,
@@ -181,12 +188,19 @@ func (oc *OAuthController) GoogleCallback(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// ส่ง response
-	respondWithSuccess(w, http.StatusOK, "Login successful via Google OAuth", responses.AuthResponse{
+	// Encode auth data เป็น base64 JSON แล้ว redirect ไปยัง frontend
+	authPayload := responses.AuthResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         responseData,
-	})
+	}
+	jsonBytes, err := json.Marshal(authPayload)
+	if err != nil {
+		redirectError("Failed to process authentication data")
+		return
+	}
+	encoded := base64.StdEncoding.EncodeToString(jsonBytes)
+	http.Redirect(w, r, "/features/auth/oauth-callback.html?data="+url.QueryEscape(encoded), http.StatusTemporaryRedirect)
 }
 
 // createUserFromGoogle สร้างบัญชีผู้ใช้ใหม่จากข้อมูล Google

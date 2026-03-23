@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "Notelet-Frontend_v1/public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
